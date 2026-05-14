@@ -1,0 +1,4 @@
+Những asset của bên thứ 3 trong dự án
+- Easy Save 3 by Moodkie
+- FULLSCREEN EDITOR by Samuel Schultze
+- VFolders 2 by Kubacho Lab
