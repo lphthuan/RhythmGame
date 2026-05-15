@@ -24,6 +24,8 @@ MonoBehaviour:
     - a6e6be75386611d41b4ad4bfaa118b8b
     - 5a4c631916141ec4384eed548f191c33
     - 5534738f5bb2aed48b1b721725fe27a8
+    - 0220aab0833d04faeb927d84ca6cc40c
+    - f54d1bd14bd3ca042bd867b519fee8cc
     values:
     - colorIndex: 1
       iconNameOrGuid: 
@@ -45,3 +47,7 @@ MonoBehaviour:
       iconNameOrGuid: cs Script Icon
     - colorIndex: 0
       iconNameOrGuid: RawImage Icon
+    - colorIndex: 6
+      iconNameOrGuid: Settings Icon
+    - colorIndex: 4
+      iconNameOrGuid: 
