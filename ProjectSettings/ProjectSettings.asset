@@ -884,11 +884,11 @@ PlayerSettings:
   captureStartupLogs: {}
   activeInputHandler: 2
   windowsGamepadBackendHint: 0
-  cloudProjectId: cc38280a-fc5d-4fc7-8292-bb87cee71f11
+  cloudProjectId: 7ca8c37d-c7ae-4d3a-94b2-313fb598ee29
   framebufferDepthMemorylessMode: 0
   qualitySettingsNames: []
   projectName: RhythmGame
-  organizationId: lephanhoathuan2006
+  organizationId: khoatnd0907
   cloudEnabled: 0
   legacyClampBlendShapeWeights: 0
   hmiLoadingImage: {fileID: 0}
