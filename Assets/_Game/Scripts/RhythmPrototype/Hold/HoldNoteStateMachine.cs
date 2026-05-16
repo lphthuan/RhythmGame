@@ -2,15 +2,22 @@ public class HoldNoteStateMachine
 {
     public HoldNoteState CurrentState { get; private set; } = HoldNoteState.Idle;
 
-    private float requiredDuration;
-    private float holdStartTime;
-    private int fingerId;
+    private int fingerId = -1;
 
-    public void StartHold(int fingerId, float startTime, float duration)
+    private float headHitTime;
+    private float tailHitTime;
+
+    public float Progress01 { get; private set; }
+
+    public void StartHold(int fingerId, float noteHitTime, float duration, float currentTime)
     {
         this.fingerId = fingerId;
-        holdStartTime = startTime;
-        requiredDuration = duration;
+
+        headHitTime = noteHitTime;
+        tailHitTime = noteHitTime + duration;
+
+        Progress01 = CalculateProgress(currentTime);
+
         CurrentState = HoldNoteState.Holding;
     }
 
@@ -19,13 +26,16 @@ public class HoldNoteStateMachine
         if (CurrentState != HoldNoteState.Holding)
             return;
 
-        float heldTime = currentTime - holdStartTime;
+        Progress01 = CalculateProgress(currentTime);
 
-        if (heldTime >= requiredDuration)
+        if (currentTime >= tailHitTime)
+        {
+            Progress01 = 1f;
             CurrentState = HoldNoteState.Completed;
+        }
     }
 
-    public void Release(int releaseFingerId)
+    public void Release(int releaseFingerId, float currentTime)
     {
         if (CurrentState != HoldNoteState.Holding)
             return;
@@ -33,7 +43,15 @@ public class HoldNoteStateMachine
         if (releaseFingerId != fingerId)
             return;
 
-        CurrentState = HoldNoteState.ReleasedEarly;
+        if (currentTime < tailHitTime)
+        {
+            CurrentState = HoldNoteState.ReleasedEarly;
+        }
+        else
+        {
+            Progress01 = 1f;
+            CurrentState = HoldNoteState.Completed;
+        }
     }
 
     public bool IsHolding()
@@ -49,5 +67,17 @@ public class HoldNoteStateMachine
     public bool IsReleasedEarly()
     {
         return CurrentState == HoldNoteState.ReleasedEarly;
+    }
+
+    private float CalculateProgress(float currentTime)
+    {
+        float totalDuration = tailHitTime - headHitTime;
+
+        if (totalDuration <= 0f)
+            return 1f;
+
+        float heldTime = currentTime - headHitTime;
+
+        return UnityEngine.Mathf.Clamp01(heldTime / totalDuration);
     }
 }

@@ -5,7 +5,7 @@ using UnityEngine.UI;
 public class SlideCheckpointSystem : MonoBehaviour
 {
     [Header("Checkpoint")]
-    [SerializeField] private float checkpointRadius = 90f;
+    [SerializeField] private float checkpointRadius = 120f;
     [SerializeField] private List<RectTransform> checkpoints = new List<RectTransform>();
 
     private int currentIndex;
@@ -68,6 +68,7 @@ public class SlideCheckpointSystem : MonoBehaviour
     {
         running = false;
         failed = true;
+        MarkRemainingFailed();
     }
 
     public bool IsCompleted()
@@ -104,6 +105,17 @@ public class SlideCheckpointSystem : MonoBehaviour
 
         if (image != null)
             image.color = Color.green;
+    }
+
+    private void MarkRemainingFailed()
+    {
+        for (int i = currentIndex; i < checkpoints.Count; i++)
+        {
+            Image image = checkpoints[i].GetComponent<Image>();
+
+            if (image != null)
+                image.color = Color.red;
+        }
     }
 
     private void RefreshVisual()
