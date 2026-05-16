@@ -14,5 +14,5 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _songTitle: Test Theme
   _sceneName: GameplayScene
-  _previewImage: {fileID: 0}
+  _previewImage: {fileID: 21300000, guid: 9f75c94a7b9a0a145bc274142a48b80d, type: 3}
   _bpm: 0

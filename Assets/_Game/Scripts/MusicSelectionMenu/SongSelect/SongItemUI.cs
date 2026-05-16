@@ -1,13 +1,13 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
 public class SongItemUI : MonoBehaviour
 {
-    [SerializeField] private TextMeshProUGUI _titleText;
-    [SerializeField] private Image _previewImage;
+    public TextMeshProUGUI _titleText;
+    public Image _previewImage;
 
-    private SongData _data;
+    public SongData _data;
 
     public void Setup(SongData data)
     {
@@ -18,8 +18,17 @@ public class SongItemUI : MonoBehaviour
 
     public void OnSelect()
     {
-        
+        // Lưu data bài hát được chọn ngoài GameManager
         SelectedSongManager.Instance.SetSelectedSong(_data);
+
+        // Đổi đúng cái ảnh preview ở giữa là đủ ăn tiền rồi
+        if (SongListManager.Instance._centerPreviewImage != null)
+        {
+            SongListManager.Instance._centerPreviewImage.sprite = _data.PreviewImage;
+        }
+
+        // ĐÃ XÓA ĐOẠN ĐỔI CHỮ DIFFICULTY Ở ĐÂY CHO ĐỠ LOẠN! 🥳
+
         Debug.Log($"Selected: {_data.SongTitle}");
     }
 }

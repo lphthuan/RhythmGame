@@ -1,18 +1,32 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI; // Thêm cái này để xài Image
+using TMPro; // Thêm cái này để xài TextMP
 
 public class SongListManager : MonoBehaviour
 {
-    [SerializeField] private List<SongData> _songList;
-    [SerializeField] private SongItemUI _itemPrefab;
-    [SerializeField] private Transform _contentArea;
+    // Tạo một Instance nhanh để gọi từ bất cứ đâu
+    public static SongListManager Instance;
+
+    public List<SongData> _songList;
+    public SongItemUI _itemPrefab;
+    public Transform _contentArea;
+
+    // Kéo thả Image cột 2 và Text cột 3 vào đây ngoài Inspector
+    public Image _centerPreviewImage;
+    public TextMeshProUGUI _rightBpmText;
+
+    private void Awake()
+    {
+        Instance = this;
+    }
 
     private void Start()
     {
         PopulateList();
     }
 
-    private void PopulateList()
+    public void PopulateList()
     {
         foreach (var song in _songList)
         {
