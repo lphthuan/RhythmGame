@@ -1,6 +1,6 @@
 # 📁 Hướng dẫn cấu trúc thư mục Scripts
 
-> **BẮT BUỘC ĐỌC** trước khi tạo file script mới. Đặt đúng thư mục module không xung đột và dễ bảo trì.
+> **BẮT BUỘC ĐỌC** trước khi tạo file script mới. Đặt đúng thư mục module để không xung đột và dễ bảo trì.
 
 ---
 
