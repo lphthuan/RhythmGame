@@ -343,13 +343,39 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   targetCanvas: {fileID: 633887582}
   noteManager: {fileID: 1842031010}
-  spawnInterval: 1.2
-  travelTime: 2.2
+  difficulty: 3
+  applyDifficultyPresetOnStart: 1
+  parallelPatternChance: 0
+  maxParallelNotes: 1
+  slideHeavyPatternChance: 0
+  insaneBurstChance: 0.65
+  insaneMinBurstWaves: 3
+  insaneMaxBurstWaves: 6
+  insaneMinWaveDelay: 0.08
+  insaneMaxWaveDelay: 0.16
+  insaneTapFlickLaneLock: 0.03
+  travelTime: 1.4
   hitlineY: -330
-  scrollSpeed: 450
+  scrollSpeed: 620
   laneWidth: 300
-  noteSize: 120
-  defaultTouchRadius: 140
+  noteSize: 110
+  defaultTouchRadius: 125
+  tapWeight: 45
+  flickWeight: 25
+  holdWeight: 15
+  slideWeight: 15
+  minSmallNoteDelay: 0.25
+  maxSmallNoteDelay: 0.45
+  minLongNoteDelay: 0.65
+  maxLongNoteDelay: 1.1
+  laneReleaseBuffer: 0.12
+  minHoldVisualHeight: 220
+  maxHoldVisualHeight: 620
+  minSlideCheckpoints: 4
+  maxSlideCheckpoints: 7
+  slideVerticalSpacing: 100
+  maxLaneStepPerCheckpoint: 2
+  slideCheckpointRadius: 110
 --- !u!4 &895126372
 Transform:
   m_ObjectHideFlags: 0
@@ -520,11 +546,14 @@ MonoBehaviour:
   useInternalClock: 1
   currentTime: 0
   autoMiss: 1
-  missAfterHitTime: 0.45
+  missAfterHitTime: 0.1
   resultReceiverBehaviour: {fileID: 1673898720}
   requireNearHitline: 1
   hitlineY: -330
   hitlineJudgeDistance: 120
+  useHitTimingWindow: 1
+  earlyHitWindow: 0.18
+  lateHitWindow: 0.12
 --- !u!4 &1842031011
 Transform:
   m_ObjectHideFlags: 0
@@ -546,7 +575,7 @@ SceneRoots:
   m_Roots:
   - {fileID: 819739477}
   - {fileID: 633887585}
-  - {fileID: 1151916340}
   - {fileID: 1842031011}
   - {fileID: 1673898721}
   - {fileID: 895126372}
+  - {fileID: 1151916340}

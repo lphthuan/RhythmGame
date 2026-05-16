@@ -10,15 +10,26 @@ public class NoteManager : MonoBehaviour
 
     [Header("Miss")]
     [SerializeField] private bool autoMiss = true;
-    [SerializeField] private float missAfterHitTime = 0.45f;
+
+    [Tooltip("Sau khi note qua hitTime bao lâu thì tính MISS nếu chưa bấm.")]
+    [SerializeField] private float missAfterHitTime = 0.16f;
 
     [Header("Receiver Optional")]
     [SerializeField] private MonoBehaviour resultReceiverBehaviour;
 
-    [Header("Hitline Test")]
+    [Header("Hitline Position TEST")]
     [SerializeField] private bool requireNearHitline = true;
     [SerializeField] private float hitlineY = -330f;
     [SerializeField] private float hitlineJudgeDistance = 120f;
+
+    [Header("Hit Timing TEST")]
+    [SerializeField] private bool useHitTimingWindow = true;
+
+    [Tooltip("Cho phép bấm sớm trước hitTime bao nhiêu giây.")]
+    [SerializeField] private float earlyHitWindow = 0.18f;
+
+    [Tooltip("Cho phép bấm trễ sau hitTime bao nhiêu giây.")]
+    [SerializeField] private float lateHitWindow = 0.12f;
 
     private INoteResultReceiver resultReceiver;
 
@@ -38,14 +49,18 @@ public class NoteManager : MonoBehaviour
             resultReceiver = resultReceiverBehaviour as INoteResultReceiver;
 
             if (resultReceiver == null)
+            {
                 Debug.LogWarning($"{resultReceiverBehaviour.name} does not implement INoteResultReceiver.");
+            }
         }
     }
 
     private void Update()
     {
         if (useInternalClock)
+        {
             currentTime += Time.deltaTime;
+        }
 
         TickNotes();
         CheckAutoMiss();
@@ -80,10 +95,15 @@ public class NoteManager : MonoBehaviour
             return;
 
         activeNotes.Remove(note);
+
+        RemoveFingerBindingOfNote(note);
     }
 
     public void NotifyNoteFinished(NoteBase note, NoteResult result)
     {
+        if (note == null)
+            return;
+
         UnregisterNote(note);
 
         resultReceiver?.OnNoteFinished(note, result);
@@ -94,13 +114,15 @@ public class NoteManager : MonoBehaviour
     {
         for (int i = activeNotes.Count - 1; i >= 0; i--)
         {
-            if (activeNotes[i] == null)
+            NoteBase note = activeNotes[i];
+
+            if (note == null)
             {
                 activeNotes.RemoveAt(i);
                 continue;
             }
 
-            activeNotes[i].Tick(currentTime);
+            note.Tick(currentTime);
         }
     }
 
@@ -116,9 +138,7 @@ public class NoteManager : MonoBehaviour
             if (note == null)
                 continue;
 
-            // Nếu note đang được giữ / đang được finger xử lý
-            // thì không được auto miss.
-            // Đặc biệt quan trọng với Hold và Slide.
+            // Hold / Slide đang được giữ thì để chính note đó tự xử lý complete/fail.
             if (note.IsAssigned)
                 continue;
 
@@ -181,13 +201,19 @@ public class NoteManager : MonoBehaviour
         );
 
         if (Input.GetMouseButtonDown(0))
+        {
             PointerBegin(pointer);
+        }
 
         if (Input.GetMouseButton(0))
+        {
             PointerMove(pointer);
+        }
 
         if (Input.GetMouseButtonUp(0))
+        {
             PointerEnd(pointer);
+        }
 
         lastMousePosition = mousePosition;
     }
@@ -209,7 +235,9 @@ public class NoteManager : MonoBehaviour
         note.OnPointerBegin(pointer);
 
         if (note.IsFinished)
+        {
             fingerToNote.Remove(pointer.fingerId);
+        }
     }
 
     private void PointerMove(NotePointer pointer)
@@ -229,7 +257,9 @@ public class NoteManager : MonoBehaviour
         note.OnPointerMove(pointer);
 
         if (note.IsFinished)
+        {
             fingerToNote.Remove(pointer.fingerId);
+        }
     }
 
     private void PointerStationary(NotePointer pointer)
@@ -249,7 +279,9 @@ public class NoteManager : MonoBehaviour
         note.OnPointerStationary(pointer);
 
         if (note.IsFinished)
+        {
             fingerToNote.Remove(pointer.fingerId);
+        }
     }
 
     private void PointerEnd(NotePointer pointer)
@@ -269,7 +301,7 @@ public class NoteManager : MonoBehaviour
     private NoteBase FindBestNote(Vector2 screenPosition)
     {
         NoteBase bestNote = null;
-        float bestDistance = float.MaxValue;
+        float bestScore = float.MaxValue;
 
         foreach (NoteBase note in activeNotes)
         {
@@ -279,23 +311,71 @@ public class NoteManager : MonoBehaviour
             if (!note.CanReceivePointer())
                 continue;
 
-            if (requireNearHitline)
+            if (!IsNoteInsideTimingWindow(note))
+                continue;
+
+            if (!IsNoteNearHitline(note))
+                continue;
+
+            float distanceToTouch = note.DistanceToPointer(screenPosition);
+
+            if (distanceToTouch > note.TouchRadius)
+                continue;
+
+            // Ưu tiên note gần hitTime hơn.
+            // Nếu timing ngang nhau thì ưu tiên note gần tay hơn.
+            float timeDelta = Mathf.Abs(currentTime - note.HitTime);
+            float score = timeDelta * 1000f + distanceToTouch;
+
+            if (score < bestScore)
             {
-                float distanceToHitline = Mathf.Abs(note.AnchoredPosition.y - hitlineY);
-
-                if (distanceToHitline > hitlineJudgeDistance)
-                    continue;
-            }
-
-            float distance = note.DistanceToPointer(screenPosition);
-
-            if (distance <= note.TouchRadius && distance < bestDistance)
-            {
-                bestDistance = distance;
+                bestScore = score;
                 bestNote = note;
             }
         }
 
         return bestNote;
+    }
+
+    private bool IsNoteInsideTimingWindow(NoteBase note)
+    {
+        if (!useHitTimingWindow)
+            return true;
+
+        float delta = currentTime - note.HitTime;
+
+        bool tooEarly = delta < -earlyHitWindow;
+        bool tooLate = delta > lateHitWindow;
+
+        return !tooEarly && !tooLate;
+    }
+
+    private bool IsNoteNearHitline(NoteBase note)
+    {
+        if (!requireNearHitline)
+            return true;
+
+        float distanceToHitline = Mathf.Abs(note.AnchoredPosition.y - hitlineY);
+
+        return distanceToHitline <= hitlineJudgeDistance;
+    }
+
+    private void RemoveFingerBindingOfNote(NoteBase note)
+    {
+        int fingerToRemove = int.MinValue;
+
+        foreach (KeyValuePair<int, NoteBase> pair in fingerToNote)
+        {
+            if (pair.Value == note)
+            {
+                fingerToRemove = pair.Key;
+                break;
+            }
+        }
+
+        if (fingerToRemove != int.MinValue)
+        {
+            fingerToNote.Remove(fingerToRemove);
+        }
     }
 }

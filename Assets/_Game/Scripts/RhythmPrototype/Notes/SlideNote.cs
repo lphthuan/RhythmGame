@@ -41,7 +41,9 @@ public class SlideNote : NoteBase
         checkpointSystem.Move(pointer.position);
 
         if (checkpointSystem.IsCompleted())
+        {
             Complete(NoteResult.Completed);
+        }
     }
 
     public override void OnPointerEnd(NotePointer pointer)
@@ -60,5 +62,10 @@ public class SlideNote : NoteBase
             checkpointSystem.Cancel();
             Fail(NoteResult.Failed);
         }
+    }
+
+    public override float GetAutoMissTime(float missAfterHitTime)
+    {
+        return hitTime + duration + missAfterHitTime;
     }
 }
