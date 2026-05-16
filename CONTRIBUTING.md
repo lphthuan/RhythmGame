@@ -93,7 +93,7 @@ Trước khi bắt đầu sửa lỗi hoặc thêm tính năng, **bắt buộc**
 
 ### 2.1. Quy tắc đặt tên nhánh (Branch Naming)
 
-**YÊU CẦU:** Tên nhánh phải được viết bằng **Tiếng Anh (English)**, chữ thường, phân cách bằng dấu gạch ngang `-`.
+**YÊU CẦU:** Tên nhánh phải được viết bằng **Tiếng Anh**, chữ thường, phân cách bằng dấu gạch ngang `-`.
 
 Cấu trúc: `type/short-description`
 
@@ -106,17 +106,17 @@ Cấu trúc: `type/short-description`
 | `docs/` | Cập nhật tài liệu | `docs/update-contributing` |
 | `chore/` | Config, build, cleanup | `chore/update-gitignore` |
 
-**❌ Sai:** `myBranch`, `test123`, `thuanfix`, `new-feature`
+**❌ Sai:** `myBranch`, `test123`, `fixbug`, `new-feature`
 **✅ Đúng:** `feat/implement-scoring-system`, `bugfix/fix-audio-desync`
 
 ### 2.2. Quy tắc viết Commit (Commit Messages)
 
-**YÊU CẦU:** Nội dung commit phải được viết bằng **Tiếng Anh (English)** và tuân thủ **Conventional Commits**.
+**YÊU CẦU:** Nội dung commit phải tuân thủ **Conventional Commits**.
 
 **Định dạng:**
 Một commit message bao gồm tiêu đề ngắn và mô tả chi tiết (tùy chọn).
-- **Summary:** Giữ dưới 72 ký tự. Sử dụng thì mệnh lệnh.
-- **Description:** Mô tả chi tiết qua các gạch đầu dòng. Giải thích *cái gì* đã thay đổi và *tại sao*.
+- **Summary:** Mô tả ngắn, phải có **prefix** ở đầu. Giữ dưới 72 ký tự.
+- **Description:** Mô tả chi tiết qua các gạch đầu dòng. Giải thích *cái gì* đã thay đổi và *tại sao*. Viết bằng tiếng Việt.
 
 Cấu trúc Summary: `prefix: short description`
 
@@ -302,7 +302,18 @@ D:\GameProjects\RhythmGame\
 │   │   ├── Data\                       # ScriptableObjects, Configs, Beatmap data
 │   │   ├── Prefabs\                    # Prefabs (Notes, UI, Effects, System)
 │   │   ├── Scenes\                     # Game scenes
-│   │   ├── Scripts\                    # C# Scripts phân theo module
+│   │   ├── Scripts\                    # ★ C# Scripts phân theo module (xem chi tiết bên dưới)
+│   │   │   ├── Common\                # Enum, Interface, Struct dùng chung
+│   │   │   ├── Core\                  # GameManager, SceneLoader, vòng đời app
+│   │   │   ├── Gameplay\              # Note logic, NoteManager, movement
+│   │   │   ├── Chart\                 # Beatmap data, đọc/ghi/tạo chart
+│   │   │   ├── Scoring\               # Judgment, Combo, Score, Accuracy
+│   │   │   ├── Input\                 # Xử lý touch/keyboard trừu tượng
+│   │   │   ├── Audio\                 # AudioManager, MusicPlayer, SFX
+│   │   │   ├── UI\                    # Giao diện (Menu, HUD, Result, ...)
+│   │   │   ├── Config\                # ScriptableObject cấu hình
+│   │   │   ├── Save\                  # Lưu/đọc dữ liệu, leaderboard
+│   │   │   └── _Debug\               # Script test/debug (không dùng trong build)
 │   │   └── Sprites\                    # Textures, UI sprites, note skins
 │   ├── _ThirdParty\                    # Thư viện bên thứ ba & Plugins
 │   └── Settings\                       # URP / Render Pipeline settings
@@ -311,6 +322,8 @@ D:\GameProjects\RhythmGame\
 ```
 
 > **⚠️ Quy tắc:** Mọi asset của dự án **phải nằm trong `_Game/`**. Không tạo folder riêng ngoài `_Game/` trừ thư viện bên thứ ba (`_ThirdParty/`).
+
+> **📖 Hướng dẫn chi tiết:** Xem file [`Scripts/SCRIPTS_GUIDE.md`](./Assets/_Game/Scripts/SCRIPTS_GUIDE.md) để biết chức năng từng module, quy tắc đặt file, và sơ đồ phụ thuộc.
 
 ---
 
@@ -391,6 +404,6 @@ Khi muốn khôi phục lại tính năng đã bị Revert:
 
 ---
 
-Mọi chi tiết thắc mắc vui lòng liên hệ Tech Lead [lphthuan](https://github.com/lphthuan) hoặc Project Manager [khoatnd223](https://github.com/khoatnd223).
+Mọi chi tiết thắc mắc vui lòng liên hệ Tech Lead [lphthuan](https://github.com/lphthuan) hoặc Project Manager [KhoaCodeBug](https://github.com/KhoaCodeBug).
 
 Cảm ơn bạn đã tuân thủ các quy tắc để dự án phát triển bền vững!
