@@ -2,6 +2,9 @@ using UnityEngine;
 
 public class ChartGeneratorTester : MonoBehaviour
 {
+    [Header("Generation Settings")]
+    [SerializeField] private ChartGenerationSettings generationSettings;
+
     [Header("Visualizer")]
     [SerializeField] private ChartVisualizer visualizer;
 
@@ -9,6 +12,7 @@ public class ChartGeneratorTester : MonoBehaviour
     [SerializeField] private string songName = "Test Song";
     [SerializeField] private float bpm = 120f;
     [SerializeField] private float songLength = 30f;
+    [SerializeField] private AudioSource musicSource;
 
     [Header("Chart Settings")]
     [SerializeField] private int laneCount = 4;
@@ -23,6 +27,25 @@ public class ChartGeneratorTester : MonoBehaviour
 
     private void Start()
     {
+        if (musicSource != null && musicSource.clip != null)
+        {
+            songLength = musicSource.clip.length;
+            songName = musicSource.clip.name;
+
+            Debug.Log($"Using AudioClip: {songName} | Length: {songLength:F2}s");
+        }
+        else
+        {
+            Debug.LogWarning("Music Source or AudioClip is missing. Using manual song length.");
+        }
+        if (generationSettings != null)
+        {
+            generationSettings.ApplyPreset();
+
+            laneCount = generationSettings.laneCount;
+            subdivision = generationSettings.subdivision;
+            noteChance = generationSettings.noteChance;
+        }
         generatedChart = SimpleChartGenerator.Generate(
             songName,
             bpm,

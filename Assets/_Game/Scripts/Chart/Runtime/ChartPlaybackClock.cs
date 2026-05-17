@@ -4,9 +4,12 @@ public class ChartPlaybackClock : MonoBehaviour
 {
     [Header("Audio")]
     [SerializeField] private AudioSource audioSource;
+    [SerializeField] private float audioOffset = 0f;
 
     [Header("State")]
     [SerializeField] private bool playOnStart = true;
+
+
 
     private float _startTime;
     private float _pausedSongTime;
@@ -16,17 +19,22 @@ public class ChartPlaybackClock : MonoBehaviour
     {
         get
         {
+            float rawTime;
+
             if (audioSource != null)
             {
-                return audioSource.time;
+                rawTime = audioSource.time;
             }
-
-            if (!_isPlaying)
+            else if (!_isPlaying)
             {
-                return _pausedSongTime;
+                rawTime = _pausedSongTime;
+            }
+            else
+            {
+                rawTime = Time.time - _startTime;
             }
 
-            return Time.time - _startTime;
+            return rawTime + audioOffset;
         }
     }
 
