@@ -7,6 +7,7 @@ using UnityEngine;
 public class TestAccuracy : MonoBehaviour
 {
     [SerializeField] private AccuracyManager _accuracyManager;
+    [SerializeField] private AllPerfectManager _allPerfectManager;
 
     private void Start()
     {
@@ -18,6 +19,11 @@ public class TestAccuracy : MonoBehaviour
         else
         {
             Debug.LogWarning("[TestAccuracy] Chưa kéo AccuracyManager vào Inspector!");
+        }
+
+        if (_allPerfectManager == null)
+        {
+            Debug.LogWarning("[TestAccuracy] Chưa kéo AllPerfectManager vào Inspector!");
         }
     }
 
@@ -58,34 +64,36 @@ public class TestAccuracy : MonoBehaviour
     [ContextMenu("Reset / Bắt đầu bài hát mới")]
     public void TestReset()
     {
-        if (_accuracyManager != null) 
-        {
-            Debug.Log("--- BẮT ĐẦU BÀI HÁT MỚI (100 Nốt) ---");
-            _accuracyManager.ResetAccuracy(100);
-        }
+        Debug.Log("--- BẮT ĐẦU BÀI HÁT MỚI (10 Nốt để test All Perfect) ---");
+        if (_accuracyManager != null) _accuracyManager.ResetAccuracy(10);
+        if (_allPerfectManager != null) _allPerfectManager.ResetState(10);
     }
 
     [ContextMenu("Gửi 1 PERFECT (100%)")]
     public void SendPerfect()
     {
         if (_accuracyManager != null) _accuracyManager.AddJudgment(HitJudgment.Perfect);
+        if (_allPerfectManager != null) _allPerfectManager.AddJudgment(HitJudgment.Perfect);
     }
 
     [ContextMenu("Gửi 1 GREAT (75%)")]
     public void SendGreat()
     {
         if (_accuracyManager != null) _accuracyManager.AddJudgment(HitJudgment.Great);
+        if (_allPerfectManager != null) _allPerfectManager.AddJudgment(HitJudgment.Great);
     }
 
     [ContextMenu("Gửi 1 GOOD (50%)")]
     public void SendGood()
     {
         if (_accuracyManager != null) _accuracyManager.AddJudgment(HitJudgment.Good);
+        if (_allPerfectManager != null) _allPerfectManager.AddJudgment(HitJudgment.Good);
     }
 
     [ContextMenu("Gửi 1 MISS (0%)")]
     public void SendMiss()
     {
         if (_accuracyManager != null) _accuracyManager.AddJudgment(HitJudgment.Miss);
+        if (_allPerfectManager != null) _allPerfectManager.AddJudgment(HitJudgment.Miss);
     }
 }
