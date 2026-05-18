@@ -13,6 +13,13 @@ public class ChartGeneratorToolEditor : Editor
 
         GUILayout.Space(10);
 
+        if (GUILayout.Button("Auto Detect BPM"))
+        {
+            tool.AutoDetectBpm();
+        }
+
+        GUILayout.Space(4);
+
         if (GUILayout.Button("Generate And Save Chart"))
         {
             tool.GenerateAndSave();

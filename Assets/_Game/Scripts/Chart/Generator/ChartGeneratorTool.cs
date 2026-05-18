@@ -70,6 +70,27 @@ public class ChartGeneratorTool : MonoBehaviour
         Debug.Log($"Loaded preview chart: {loadedChart.songName} | Notes: {loadedChart.notes.Count}");
     }
 
+    public void AutoDetectBpm()
+    {
+        if (musicSource == null || musicSource.clip == null)
+        {
+            Debug.LogError("ChartGeneratorTool: Music source or AudioClip is missing.");
+            return;
+        }
+
+        if (generationSettings == null)
+        {
+            Debug.LogError("ChartGeneratorTool: Generation Settings is missing.");
+            return;
+        }
+
+        float detectedBpm = BpmDetector.Detect(musicSource.clip);
+        generationSettings.bpm = detectedBpm;
+
+        Debug.Log($"ChartGeneratorTool: Auto-detected BPM = {detectedBpm:F1} " +
+                  $"và đã điền vào Generation Settings.");
+    }
+
     public void SaveEditedChart()
     {
         if (visualizer == null)
