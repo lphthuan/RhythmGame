@@ -10,6 +10,7 @@ public class HoldNote : NoteBase
     private readonly HoldNoteStateMachine stateMachine = new HoldNoteStateMachine();
 
     private bool visualCreated;
+    private bool judgmentEffectShown;
 
     protected override void Awake()
     {
@@ -21,8 +22,12 @@ public class HoldNote : NoteBase
     {
         base.Initialize(data);
 
+        stateMachine.Reset();
+        judgmentEffectShown = false;
+
         CreateHoldVisualIfNeeded();
         SetHoldProgress(0f);
+        SetHoldFillColor(Color.yellow);
 
         SetColor(Color.white);
     }
@@ -39,6 +44,7 @@ public class HoldNote : NoteBase
         );
 
         SetColor(Color.yellow);
+        SetHoldFillColor(Color.yellow);
         SetHoldProgress(stateMachine.Progress01);
     }
 
@@ -54,19 +60,22 @@ public class HoldNote : NoteBase
         if (stateMachine.IsHolding())
         {
             SetColor(Color.yellow);
+            SetHoldFillColor(Color.yellow);
             SetHoldProgress(stateMachine.Progress01);
+            return;
         }
 
         if (stateMachine.IsCompleted())
         {
-            SetHoldProgress(1f);
-            SetHoldFillColor(Color.green);
-            Complete(NoteResult.Completed);
+            CompleteHold();
         }
     }
 
     public override void OnPointerEnd(NotePointer pointer)
     {
+        if (IsFinished)
+            return;
+
         float currentTime = owner != null ? owner.CurrentTime : 0f;
 
         stateMachine.Release(pointer.fingerId, currentTime);
@@ -74,24 +83,61 @@ public class HoldNote : NoteBase
         if (stateMachine.IsReleasedEarly())
         {
             SetHoldFillColor(Color.red);
+            SetColor(Color.red);
+
             Fail(NoteResult.ReleasedEarly);
+            return;
         }
 
         if (stateMachine.IsCompleted())
         {
-            SetHoldProgress(1f);
-            SetHoldFillColor(Color.green);
-            Complete(NoteResult.Completed);
+            CompleteHold();
         }
     }
 
     public override float GetAutoMissTime(float missAfterHitTime)
     {
-        // Quan trọng:
         // Nếu người chơi không chạm đầu Hold lúc nó tới hitline,
-        // nó phải miss sớm giống Tap Note.
-        // Không được chờ tới hitTime + duration.
+        // nó miss sớm giống Tap Note.
         return hitTime + missAfterHitTime;
+    }
+
+    public override Vector3 GetHitEffectWorldPosition()
+    {
+        if (rectTransform == null)
+            rectTransform = GetComponent<RectTransform>();
+
+        float holdHeight = rectTransform.rect.height;
+
+        // Hold Note đang dùng pivot ở đáy:
+        // đáy = đầu Hold
+        // đỉnh = đuôi Hold
+        // nên effect lấy vị trí đuôi Hold.
+        return rectTransform.TransformPoint(new Vector3(0f, holdHeight, 0f));
+    }
+
+    private void CompleteHold()
+    {
+        if (IsFinished)
+            return;
+
+        SetHoldProgress(1f);
+        SetHoldFillColor(Color.green);
+        SetColor(Color.green);
+
+        ShowJudgmentEffectOnce();
+
+        Complete(NoteResult.Completed);
+    }
+
+    private void ShowJudgmentEffectOnce()
+    {
+        if (judgmentEffectShown)
+            return;
+
+        judgmentEffectShown = true;
+
+        owner?.NotifyJudgmentEffect(this);
     }
 
     private void CreateHoldVisualIfNeeded()

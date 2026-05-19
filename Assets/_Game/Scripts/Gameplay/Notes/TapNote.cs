@@ -10,6 +10,7 @@ public class TapNote : NoteBase
 
     public override void OnPointerBegin(NotePointer pointer)
     {
+        owner?.NotifyJudgmentEffect(this);
         Complete(NoteResult.Completed);
     }
 }

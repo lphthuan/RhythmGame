@@ -11,25 +11,19 @@ public class NoteManager : MonoBehaviour
     [Header("Miss")]
     [SerializeField] private bool autoMiss = true;
 
-    [Tooltip("Sau khi note qua hitTime bao lâu thì tính MISS nếu chưa bấm.")]
-    [SerializeField] private float missAfterHitTime = 0.16f;
+    [Tooltip("Sau khi hết Good Window, chờ thêm bao nhiêu giây rồi mới tính MISS.")]
+    [SerializeField] private float autoMissExtraDelay = 0.16f;
 
     [Header("Receiver Optional")]
     [SerializeField] private MonoBehaviour resultReceiverBehaviour;
 
+    [Header("Judgment")]
+    [SerializeField] private JudgmentWindow judgmentWindow = new JudgmentWindow();
+
     [Header("Hitline Position TEST")]
     [SerializeField] private bool requireNearHitline = true;
     [SerializeField] private float hitlineY = -330f;
-    [SerializeField] private float hitlineJudgeDistance = 120f;
-
-    [Header("Hit Timing TEST")]
-    [SerializeField] private bool useHitTimingWindow = true;
-
-    [Tooltip("Cho phép bấm sớm trước hitTime bao nhiêu giây.")]
-    [SerializeField] private float earlyHitWindow = 0.18f;
-
-    [Tooltip("Cho phép bấm trễ sau hitTime bao nhiêu giây.")]
-    [SerializeField] private float lateHitWindow = 0.12f;
+    [SerializeField] private float hitlineJudgeDistance = 150f;
 
     private INoteResultReceiver resultReceiver;
 
@@ -39,20 +33,13 @@ public class NoteManager : MonoBehaviour
     private Vector2 lastMousePosition;
 
     public event Action<NoteBase, NoteResult> OnNoteFinishedEvent;
+    public event Action<NoteBase, HitJudgment, float> OnNoteJudgedEvent;
 
     public float CurrentTime => currentTime;
 
     private void Awake()
     {
-        if (resultReceiverBehaviour != null)
-        {
-            resultReceiver = resultReceiverBehaviour as INoteResultReceiver;
-
-            if (resultReceiver == null)
-            {
-                Debug.LogWarning($"{resultReceiverBehaviour.name} does not implement INoteResultReceiver.");
-            }
-        }
+        ResolveResultReceiver();
     }
 
     private void Update()
@@ -63,12 +50,29 @@ public class NoteManager : MonoBehaviour
         }
 
         TickNotes();
-        CheckAutoMiss();
+
+        // Xử lý input trước AutoMiss để tránh trường hợp:
+        // note vừa qua window → bị miss trước → người chơi bấm cùng frame nhưng không ăn.
         HandleTouchInput();
 
 #if UNITY_EDITOR
         HandleMouseInputForEditor();
 #endif
+
+        CheckAutoMiss();
+    }
+
+    private void ResolveResultReceiver()
+    {
+        if (resultReceiverBehaviour == null)
+            return;
+
+        resultReceiver = resultReceiverBehaviour as INoteResultReceiver;
+
+        if (resultReceiver == null)
+        {
+            Debug.LogWarning($"{resultReceiverBehaviour.name} does not implement INoteResultReceiver.");
+        }
     }
 
     public void SetExternalTime(float time)
@@ -95,7 +99,6 @@ public class NoteManager : MonoBehaviour
             return;
 
         activeNotes.Remove(note);
-
         RemoveFingerBindingOfNote(note);
     }
 
@@ -108,6 +111,21 @@ public class NoteManager : MonoBehaviour
 
         resultReceiver?.OnNoteFinished(note, result);
         OnNoteFinishedEvent?.Invoke(note, result);
+    }
+    public void NotifyJudgmentEffect(NoteBase note)
+    {
+        if (note == null)
+            return;
+
+        if (note.LastJudgment == HitJudgment.None ||
+            note.LastJudgment == HitJudgment.Miss)
+            return;
+
+        OnNoteJudgedEvent?.Invoke(
+            note,
+            note.LastJudgment,
+            note.LastDeltaMs
+        );
     }
 
     private void TickNotes()
@@ -142,10 +160,11 @@ public class NoteManager : MonoBehaviour
             if (note.IsAssigned)
                 continue;
 
-            float missTime = note.GetAutoMissTime(missAfterHitTime);
+            float missTime = note.HitTime + judgmentWindow.goodWindow + autoMissExtraDelay;
 
             if (currentTime > missTime)
             {
+                note.SetJudgment(HitJudgment.Miss, 0f);
                 note.ForceMiss();
             }
         }
@@ -229,6 +248,17 @@ public class NoteManager : MonoBehaviour
         if (!note.CanReceivePointer())
             return;
 
+        HitJudgment judgment = judgmentWindow.Judge(
+            currentTime,
+            note.HitTime,
+            out float deltaMs
+        );
+
+        if (judgment == HitJudgment.Miss)
+            return;
+
+        note.SetJudgment(judgment, deltaMs);
+
         note.AssignFinger(pointer.fingerId);
         fingerToNote[pointer.fingerId] = note;
 
@@ -311,11 +341,18 @@ public class NoteManager : MonoBehaviour
             if (!note.CanReceivePointer())
                 continue;
 
-            if (!IsNoteInsideTimingWindow(note))
+            // Không cho bấm quá sớm hoặc quá trễ.
+            if (!judgmentWindow.IsInsideHitWindow(currentTime, note.HitTime))
                 continue;
 
-            if (!IsNoteNearHitline(note))
-                continue;
+            // Test thêm vị trí note có gần hitline không.
+            if (requireNearHitline)
+            {
+                float distanceToHitline = Mathf.Abs(note.AnchoredPosition.y - hitlineY);
+
+                if (distanceToHitline > hitlineJudgeDistance)
+                    continue;
+            }
 
             float distanceToTouch = note.DistanceToPointer(screenPosition);
 
@@ -323,7 +360,7 @@ public class NoteManager : MonoBehaviour
                 continue;
 
             // Ưu tiên note gần hitTime hơn.
-            // Nếu timing ngang nhau thì ưu tiên note gần tay hơn.
+            // Nếu timing gần nhau thì ưu tiên note gần vị trí chạm hơn.
             float timeDelta = Mathf.Abs(currentTime - note.HitTime);
             float score = timeDelta * 1000f + distanceToTouch;
 
@@ -335,29 +372,6 @@ public class NoteManager : MonoBehaviour
         }
 
         return bestNote;
-    }
-
-    private bool IsNoteInsideTimingWindow(NoteBase note)
-    {
-        if (!useHitTimingWindow)
-            return true;
-
-        float delta = currentTime - note.HitTime;
-
-        bool tooEarly = delta < -earlyHitWindow;
-        bool tooLate = delta > lateHitWindow;
-
-        return !tooEarly && !tooLate;
-    }
-
-    private bool IsNoteNearHitline(NoteBase note)
-    {
-        if (!requireNearHitline)
-            return true;
-
-        float distanceToHitline = Mathf.Abs(note.AnchoredPosition.y - hitlineY);
-
-        return distanceToHitline <= hitlineJudgeDistance;
     }
 
     private void RemoveFingerBindingOfNote(NoteBase note)

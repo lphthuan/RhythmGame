@@ -17,6 +17,9 @@ public abstract class NoteBase : MonoBehaviour
     [Header("Visual")]
     [SerializeField] protected Image noteImage;
 
+    [SerializeField] private HitJudgment lastJudgment = HitJudgment.None;
+    [SerializeField] private float lastDeltaMs;
+
     protected NoteManager owner;
     protected NoteMovement movement;
     protected RectTransform rectTransform;
@@ -35,6 +38,8 @@ public abstract class NoteBase : MonoBehaviour
 
     public bool IsFinished => completed || failed;
     public bool IsAssigned => assigned;
+    public HitJudgment LastJudgment => lastJudgment;
+    public float LastDeltaMs => lastDeltaMs;
 
     public Vector2 AnchoredPosition
     {
@@ -53,6 +58,7 @@ public abstract class NoteBase : MonoBehaviour
 
     public void ForceMiss()
     {
+        SetJudgment(HitJudgment.Miss, 0f);
         Fail(NoteResult.Missed);
     }
 
@@ -72,6 +78,8 @@ public abstract class NoteBase : MonoBehaviour
         hitTime = data.hitTime;
         duration = data.duration;
         touchRadius = data.touchRadius;
+        lastJudgment = HitJudgment.None;
+        lastDeltaMs = 0f;
 
         completed = false;
         failed = false;
@@ -131,6 +139,20 @@ public abstract class NoteBase : MonoBehaviour
         );
 
         return Vector2.Distance(noteScreenPosition, screenPosition);
+    }
+
+    public virtual Vector3 GetHitEffectWorldPosition()
+    {
+        if (rectTransform == null)
+            rectTransform = GetComponent<RectTransform>();
+
+        return rectTransform.position;
+    }
+
+    public void SetJudgment(HitJudgment judgment, float deltaMs)
+    {
+        lastJudgment = judgment;
+        lastDeltaMs = deltaMs;
     }
 
     public virtual void OnPointerBegin(NotePointer pointer) { }

@@ -9,6 +9,17 @@ public class HoldNoteStateMachine
 
     public float Progress01 { get; private set; }
 
+    public void Reset()
+    {
+        CurrentState = HoldNoteState.Idle;
+
+        fingerId = -1;
+        headHitTime = 0f;
+        tailHitTime = 0f;
+
+        Progress01 = 0f;
+    }
+
     public void StartHold(int fingerId, float noteHitTime, float duration, float currentTime)
     {
         this.fingerId = fingerId;
@@ -52,6 +63,11 @@ public class HoldNoteStateMachine
             Progress01 = 1f;
             CurrentState = HoldNoteState.Completed;
         }
+    }
+
+    public bool IsIdle()
+    {
+        return CurrentState == HoldNoteState.Idle;
     }
 
     public bool IsHolding()

@@ -119,6 +119,70 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!1 &512663224
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 512663226}
+  - component: {fileID: 512663225}
+  m_Layer: 0
+  m_Name: HitEffectReceiverObject
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &512663225
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 512663224}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: db48dc4554ef58942aab2637bbb6c4fe, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  targetCanvas: {fileID: 633887582}
+  noteManager: {fileID: 1842031010}
+  perfectSprite: {fileID: 7014676936013354292, guid: 51177e1e5bea27846a66058c3dc31328, type: 3}
+  greatSprite: {fileID: -7527175163823706875, guid: 0c96da92c7ae7a148a3c942f1afd23c0, type: 3}
+  goodSprite: {fileID: -3777184159844669818, guid: faf5f9d9549f42144a49a07cdc28bf6f, type: 3}
+  missSprite: {fileID: 413248917955918174, guid: ff1bbf91cf28b3b4a8a268dd555d47b1, type: 3}
+  centerOffset: {x: 0, y: -180}
+  effectSize: {x: 220, y: 80}
+  effectLifetime: 0.48
+  allowStackedEffects: 1
+  maxVisibleEffects: 3
+  stackedOffsetRadius: 18
+  stackedScaleStep: 0.04
+  stackedRotationRange: 2
+  startScale: 0.65
+  popScale: 1.18
+  settleScale: 1
+  popTime: 0.08
+  fadeStartTime: 0.18
+  floatUpDistance: 22
+--- !u!4 &512663226
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 512663224}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 960, y: 540, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &633887581
 GameObject:
   m_ObjectHideFlags: 0
@@ -343,8 +407,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   targetCanvas: {fileID: 633887582}
   noteManager: {fileID: 1842031010}
-  difficulty: 3
+  difficulty: 0
   applyDifficultyPresetOnStart: 1
+  noteHeight: 82
+  noteWidthPadding: 20
   parallelPatternChance: 0
   maxParallelNotes: 1
   slideHeavyPatternChance: 0
@@ -358,10 +424,9 @@ MonoBehaviour:
   hitlineY: -330
   scrollSpeed: 620
   laneWidth: 300
-  noteSize: 110
-  defaultTouchRadius: 125
+  defaultTouchRadius: 160
   tapWeight: 45
-  flickWeight: 25
+  flickWeight: 0
   holdWeight: 15
   slideWeight: 15
   minSmallNoteDelay: 0.25
@@ -386,6 +451,53 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 1204.0865, y: 978.97473, z: -7.895132}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1150528993
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1150528995}
+  - component: {fileID: 1150528994}
+  m_Layer: 0
+  m_Name: NoteResultDispatcherObject
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1150528994
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1150528993}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 42724e9e3e345b04faa7db88193d02d3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  receiverBehaviours:
+  - {fileID: 512663225}
+  - {fileID: 1673898720}
+--- !u!4 &1150528995
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1150528993}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 960, y: 540, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -499,6 +611,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 529bbed50296cf04da2587796920c6b8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  destroyNoteAfterResult: 1
+  destroyDelay: 0.75
 --- !u!4 &1673898721
 Transform:
   m_ObjectHideFlags: 0
@@ -546,14 +660,15 @@ MonoBehaviour:
   useInternalClock: 1
   currentTime: 0
   autoMiss: 1
-  missAfterHitTime: 0.1
-  resultReceiverBehaviour: {fileID: 1673898720}
+  autoMissExtraDelay: 0.04
+  resultReceiverBehaviour: {fileID: 1150528994}
+  judgmentWindow:
+    perfectWindow: 0.05
+    greatWindow: 0.09
+    goodWindow: 0.15
   requireNearHitline: 1
   hitlineY: -330
-  hitlineJudgeDistance: 120
-  useHitTimingWindow: 1
-  earlyHitWindow: 0.18
-  lateHitWindow: 0.12
+  hitlineJudgeDistance: 150
 --- !u!4 &1842031011
 Transform:
   m_ObjectHideFlags: 0
@@ -575,7 +690,9 @@ SceneRoots:
   m_Roots:
   - {fileID: 819739477}
   - {fileID: 633887585}
+  - {fileID: 1151916340}
   - {fileID: 1842031011}
+  - {fileID: 1150528995}
   - {fileID: 1673898721}
   - {fileID: 895126372}
-  - {fileID: 1151916340}
+  - {fileID: 512663226}

@@ -62,9 +62,14 @@ public class FlickNote : NoteBase
         checkedFlick = true;
 
         if (IsDirectionValid(delta))
+        {
+            owner?.NotifyJudgmentEffect(this);
             Complete(NoteResult.Completed);
+        }
         else
+        {
             Fail(NoteResult.Failed);
+        }
     }
 
     public override void OnPointerEnd(NotePointer pointer)

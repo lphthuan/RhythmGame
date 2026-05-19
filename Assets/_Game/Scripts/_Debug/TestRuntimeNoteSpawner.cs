@@ -27,6 +27,10 @@ public class TestRuntimeNoteSpawner : MonoBehaviour
     [SerializeField] private TestSpawnDifficulty difficulty = TestSpawnDifficulty.Normal;
     [SerializeField] private bool applyDifficultyPresetOnStart = true;
 
+    [Header("Note Visual Shape TEST")]
+    [SerializeField] private float noteHeight = 80f;
+    [SerializeField] private float noteWidthPadding = 24f;
+
     [SerializeField] private float parallelPatternChance = 0.0f;
     [SerializeField] private int maxParallelNotes = 1;
     [SerializeField] private float slideHeavyPatternChance = 0.0f;
@@ -46,7 +50,6 @@ public class TestRuntimeNoteSpawner : MonoBehaviour
 
     [Header("Landscape Layout")]
     [SerializeField] private float laneWidth = 300f;
-    [SerializeField] private float noteSize = 120f;
 
     [Header("Touch")]
     [SerializeField] private float defaultTouchRadius = 140f;
@@ -241,7 +244,7 @@ public class TestRuntimeNoteSpawner : MonoBehaviour
 
                 minSlideCheckpoints = 4;
                 maxSlideCheckpoints = 7;
-                slideVerticalSpacing = 100f;
+                slideVerticalSpacing = 90f;
                 maxLaneStepPerCheckpoint = 2;
                 slideCheckpointRadius = 110f;
 
@@ -278,8 +281,8 @@ public class TestRuntimeNoteSpawner : MonoBehaviour
 
                 minSlideCheckpoints = 4;
                 maxSlideCheckpoints = 7;
-                slideVerticalSpacing = 95f;
-                maxLaneStepPerCheckpoint = 2;
+                slideVerticalSpacing = 75f;
+                maxLaneStepPerCheckpoint = 1;
                 slideCheckpointRadius = 105f;
 
                 parallelPatternChance = 0.58f;
@@ -658,7 +661,7 @@ public class TestRuntimeNoteSpawner : MonoBehaviour
         GameObject obj = CreateBaseNoteObject(
             "TEST_TAP_NOTE",
             laneIndex,
-            new Vector2(noteSize, noteSize)
+            GetLaneNoteSize()
         );
 
         obj.AddComponent<NoteMovement>();
@@ -675,7 +678,7 @@ public class TestRuntimeNoteSpawner : MonoBehaviour
         GameObject obj = CreateBaseNoteObject(
             "TEST_FLICK_NOTE",
             laneIndex,
-            new Vector2(noteSize, noteSize)
+            GetLaneNoteSize()
         );
 
         obj.AddComponent<NoteMovement>();
@@ -705,7 +708,7 @@ public class TestRuntimeNoteSpawner : MonoBehaviour
         GameObject obj = CreateBaseNoteObject(
             "TEST_HOLD_NOTE",
             laneIndex,
-            new Vector2(noteSize, holdVisualHeight),
+            new Vector2(laneWidth - noteWidthPadding, holdVisualHeight),
             new Vector2(0.5f, 0f)
         );
 
@@ -858,25 +861,6 @@ public class TestRuntimeNoteSpawner : MonoBehaviour
         }
 
         return available;
-    }
-
-    private List<int> GetRandomLanesAllowingDense(int wantedCount)
-    {
-        List<int> lanes = new List<int>();
-
-        for (int lane = 0; lane < 4; lane++)
-        {
-            lanes.Add(lane);
-        }
-
-        ShuffleList(lanes);
-
-        if (lanes.Count > wantedCount)
-        {
-            lanes.RemoveRange(wantedCount, lanes.Count - wantedCount);
-        }
-
-        return lanes;
     }
 
     private void ShuffleList(List<int> list)
@@ -1077,7 +1061,7 @@ public class TestRuntimeNoteSpawner : MonoBehaviour
 
     private float GetMinimumTapFlickLaneLock()
     {
-        float minVisualSpacing = noteSize * 1.35f;
+        float minVisualSpacing = noteHeight * 1.6f;
         float timeSpacing = minVisualSpacing / scrollSpeed;
 
         return Mathf.Max(insaneTapFlickLaneLock, timeSpacing);
@@ -1087,6 +1071,11 @@ public class TestRuntimeNoteSpawner : MonoBehaviour
     {
         float startX = -laneWidth * 1.5f;
         return startX + laneIndex * laneWidth;
+    }
+
+    private Vector2 GetLaneNoteSize()
+    {
+        return new Vector2(laneWidth - noteWidthPadding, noteHeight);
     }
 
     private FlickDirection RandomFlickDirection()

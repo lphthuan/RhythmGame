@@ -30,6 +30,8 @@ public class SlideNote : NoteBase
             return;
         }
 
+        owner?.NotifyJudgmentEffect(this);
+
         SetColor(Color.yellow);
     }
 

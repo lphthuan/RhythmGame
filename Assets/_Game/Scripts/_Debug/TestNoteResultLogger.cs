@@ -5,10 +5,22 @@
 // Không đem qua scene chính.
 public class TestNoteResultLogger : MonoBehaviour, INoteResultReceiver
 {
+    [Header("TEST ONLY")]
+    [SerializeField] private bool destroyNoteAfterResult = true;
+    [SerializeField] private float destroyDelay = 0.75f;
+
     public void OnNoteFinished(NoteBase note, NoteResult result)
     {
-        Debug.Log($"[TEST RESULT] {note.name} / {note.NoteType} / Result: {result}");
+        if (note == null)
+            return;
 
-        Destroy(note.gameObject, 0.25f);
+        Debug.Log(
+            $"[TEST RESULT] {note.name} / {note.NoteType} / Result: {result} / Judgment: {note.LastJudgment} / Delta: {note.LastDeltaMs:0.0}ms"
+        );
+
+        if (destroyNoteAfterResult)
+        {
+            Destroy(note.gameObject, destroyDelay);
+        }
     }
 }
