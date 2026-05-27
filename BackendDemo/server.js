@@ -19,11 +19,12 @@ let userBalance = 0;
 const transactions = [];
 
 const PACKAGES = [
-    { id: 'p0', name: 'Gói 29k', price: 29000, amount: 100, description: '100 Xu' },
-    { id: 'p1', name: 'Gói Cơ Bản', price: 10000, amount: 10000, description: '10,000 Xu' },
-    { id: 'p2', name: 'Gói Tiêu Chuẩn', price: 50000, amount: 55000, description: '50,000 Xu + 5,000 Xu thưởng' },
-    { id: 'p3', name: 'Gói Cao Cấp', price: 129000, amount: 150000, description: '129,000 Xu + 21,000 Xu thưởng' },
-    { id: 'p4', name: 'Gói VIP', price: 599000, amount: 750000, description: '599,000 Xu + 151,000 Xu thưởng' },
+    { id: 'p0', name: 'Gói Tân Thủ', price: 20000, amount: 200, description: '200 RC' },
+    { id: 'p1', name: 'Gói Khởi Đầu', price: 50000, amount: 550, description: '500 RC + 50 Thưởng' },
+    { id: 'p2', name: 'Gói Phổ Thông', price: 100000, amount: 1150, description: '1000 RC + 150 Thưởng' },
+    { id: 'p3', name: 'Gói Chuyên Nghiệp', price: 200000, amount: 2400, description: '2000 RC + 400 Thưởng' },
+    { id: 'p4', name: 'Gói Cao Cấp', price: 500000, amount: 6200, description: '5000 RC + 1200 Thưởng' },
+    { id: 'p5', name: 'Gói Huyền Thoại', price: 1000000, amount: 13000, description: '10000 RC + 3000 Thưởng' },
 ];
 
 const DEV_PACKAGES = [
@@ -147,7 +148,9 @@ app.post('/api/payment/vnpay', (req, res) => {
 });
 
 app.get('/api/payment/vnpay_return', (req, res) => {
+    console.log('--- VNPay Return Hit ---');
     let vnp_Params = req.query;
+    console.log(vnp_Params);
     let secureHash = vnp_Params['vnp_SecureHash'];
 
     delete vnp_Params['vnp_SecureHash'];
@@ -165,26 +168,36 @@ app.get('/api/payment/vnpay_return', (req, res) => {
         const responseCode = vnp_Params['vnp_ResponseCode'];
         const orderId = vnp_Params['vnp_TxnRef'];
         
+        console.log(`Signature Match! OrderId: ${orderId}, ResponseCode: ${responseCode}`);
+
         if (responseCode === '00') {
-            // Update balance here in return as well for better UX
             const trans = transactions.find(t => t.orderId === orderId);
-            if (trans && trans.status !== 'success') {
-                const pkg = PACKAGES.find(p => p.id === trans.packageId);
-                if (pkg) {
-                    userBalance += pkg.amount;
-                    trans.status = 'success';
+            if (trans) {
+                if (trans.status !== 'success') {
+                    const pkg = PACKAGES.find(p => p.id === trans.packageId);
+                    if (pkg) {
+                        userBalance += pkg.amount;
+                        trans.status = 'success';
+                        console.log(`Balance updated: +${pkg.amount}. New Balance: ${userBalance}`);
+                    }
+                } else {
+                    console.log('Order already successful.');
                 }
+            } else {
+                console.log('Transaction not found in memory.');
             }
             res.redirect(`${frontendUrl}?paymentStatus=success`);
         } else {
             res.redirect(`${frontendUrl}?paymentStatus=failed&code=${responseCode}`);
         }
     } else {
+        console.log('VNPay Signature Mismatch!');
         res.redirect(`${frontendUrl}?paymentStatus=error&message=InvalidSignature`);
     }
 });
 
 app.get('/api/payment/vnpay_ipn', (req, res) => {
+    console.log('--- VNPay IPN Hit ---');
     let vnp_Params = req.query;
     let secureHash = vnp_Params['vnp_SecureHash'];
 
@@ -212,6 +225,7 @@ app.get('/api/payment/vnpay_ipn', (req, res) => {
                         // Thanh cong
                         userBalance += pkg.amount;
                         trans.status = 'success';
+                        console.log(`IPN: Balance updated: +${pkg.amount}. New Balance: ${userBalance}`);
                         res.status(200).json({ RspCode: '00', Message: 'Success' });
                     } else {
                         // That bai
@@ -233,6 +247,29 @@ app.get('/api/payment/vnpay_ipn', (req, res) => {
 });
 
 // --- MoMo Logic ---
+app.get('/api/payment/momo_return', (req, res) => {
+    console.log('--- MoMo Return Hit ---');
+    const { orderId, resultCode, message } = req.query;
+    console.log(req.query);
+    
+    const trans = transactions.find(t => t.orderId === orderId);
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+
+    if (resultCode == '0') {
+        if (trans && trans.status !== 'success') {
+            const pkg = PACKAGES.find(p => p.id === trans.packageId);
+            if (pkg) {
+                userBalance += pkg.amount;
+                trans.status = 'success';
+                console.log(`MoMo Return: Balance updated: +${pkg.amount}. New Balance: ${userBalance}`);
+            }
+        }
+        res.redirect(`${frontendUrl}?paymentStatus=success`);
+    } else {
+        console.log(`MoMo Payment Failed: ${message}`);
+        res.redirect(`${frontendUrl}?paymentStatus=failed&code=${resultCode}`);
+    }
+});
 app.post(['/api/payment/momo', '/api/payment/momo_atm'], async (req, res) => {
     const isAtm = req.path.includes('momo_atm');
     const { packageId } = req.body;
