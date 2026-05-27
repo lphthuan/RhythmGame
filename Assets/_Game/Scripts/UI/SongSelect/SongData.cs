@@ -6,9 +6,28 @@ public class SongData : ScriptableObject
     public string _songTitle;
     public string _sceneName;
     public Sprite _previewImage;
-    public float _bpm;
+    public float  _bpm;
 
+    // ── Legacy (giữ để không break SO cũ) ──────────────────────
+    [Tooltip("[Legacy] Chuỗi độ khó tự do. Dùng difficultyLevel bên dưới cho hệ thống mới.")]
     public string _difficulty = "Normal";
+
+    // ── Save & Unlock System ────────────────────────────────────
+    [Header("Save & Unlock")]
+
+    [Tooltip(
+        "ID nhóm bài — phải GIỐNG NHAU cho tất cả difficulty của cùng 1 bài nhạc.\n" +
+        "Dùng lowercase, underscore. Ví dụ: 'axium_divergence'\n" +
+        "Đây là chuỗi được dùng làm khóa lưu điểm.")]
+    public string songGroupId;
+
+    [Tooltip("Độ khó của chart này (Easy / Medium / Hard).")]
+    public Difficulty difficultyLevel = Difficulty.Easy;
+
+    [Tooltip(
+        "Free: Easy + Medium mở mặc định khi cài game.\n" +
+        "Purchase: Cần mua trong Shop → mở Easy + Medium.")]
+    public SongUnlockType unlockType = SongUnlockType.Free;
 
     [Header("Chart Integration")]
     [Tooltip("AudioClip của bài nhạc này.")]

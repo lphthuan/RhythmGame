@@ -403,6 +403,167 @@ function sortObject(obj) {
     return sorted;
 }
 
+// ============================================================
+// SCORE & SAVE SYSTEM ENDPOINTS (in-memory stub)
+// TODO: Thay bằng DB thực (MongoDB / PostgreSQL) khi production
+// ============================================================
+
+// In-memory storage cho scores và player data
+const playerScores    = {};  // { playerId: { songKey: { score, accuracy, rank, ... } } }
+const playerSettings  = {};  // { playerId: PlayerSettings }
+const playerProgress  = {};  // { playerId: { songKey: { isUnlocked, isPurchased } } }
+
+// ── Score Endpoints ──────────────────────────────────────────
+
+/**
+ * POST /api/scores
+ * Body: { playerId, songKey, difficulty, score, accuracy, rank, timestamp }
+ * Lưu điểm cao nhất. Nếu điểm mới thấp hơn → bỏ qua (không override).
+ */
+app.post('/api/scores', (req, res) => {
+    const { playerId, songKey, score, accuracy, rank, difficulty, timestamp } = req.body;
+
+    if (!playerId || !songKey || score === undefined) {
+        return res.status(400).json({ message: 'Thiếu playerId, songKey hoặc score.' });
+    }
+
+    if (!playerScores[playerId])  playerScores[playerId] = {};
+
+    const existing = playerScores[playerId][songKey];
+    const isNewHighScore = !existing || score > existing.score;
+
+    if (isNewHighScore) {
+        playerScores[playerId][songKey] = { songKey, score, accuracy, rank, difficulty, updatedAt: timestamp || Date.now() };
+        console.log(`[Score] New high score for ${playerId}/${songKey}: ${score} (${rank})`);
+    }
+
+    res.json({ success: true, isNewHighScore });
+});
+
+/**
+ * GET /api/scores/:songKey
+ * Lấy top 10 điểm cao nhất của một bài từ tất cả người dùng.
+ * Dùng cho bảng xếp hạng cloud (tương lai).
+ */
+app.get('/api/scores/:songKey', (req, res) => {
+    const { songKey } = req.params;
+
+    const allEntries = [];
+    for (const [pid, songs] of Object.entries(playerScores)) {
+        if (songs[songKey]) {
+            allEntries.push({ playerId: pid, ...songs[songKey] });
+        }
+    }
+
+    const top10 = allEntries
+        .sort((a, b) => b.score - a.score || b.accuracy - a.accuracy)
+        .slice(0, 10);
+
+    res.json({ songKey, leaderboard: top10 });
+});
+
+// ── Player Data Endpoints ────────────────────────────────────
+
+/**
+ * GET /api/player/data
+ * Header: X-Player-Id: <playerId>
+ * Trả về toàn bộ dữ liệu save của người chơi (để download khi login thiết bị mới).
+ */
+app.get('/api/player/data', (req, res) => {
+    const playerId = req.headers['x-player-id'];
+    if (!playerId) return res.status(401).json({ message: 'Thiếu X-Player-Id header.' });
+
+    const songs    = Object.values(playerScores[playerId]   || {});
+    const settings = playerSettings[playerId] || {};
+    const progress = playerProgress[playerId] || {};
+
+    res.json({
+        playerId,
+        songs,
+        settings,
+        progress,
+        lastSyncedAt: Date.now()
+    });
+});
+
+/**
+ * POST /api/player/settings
+ * Header: X-Player-Id: <playerId>
+ * Body: PlayerSettings JSON
+ */
+app.post('/api/player/settings', (req, res) => {
+    const playerId = req.headers['x-player-id'];
+    if (!playerId) return res.status(401).json({ message: 'Thiếu X-Player-Id header.' });
+
+    playerSettings[playerId] = req.body;
+    console.log(`[Settings] Saved settings for ${playerId}`);
+    res.json({ success: true });
+});
+
+/**
+ * POST /api/player/progress
+ * Header: X-Player-Id: <playerId>
+ * Body: { songKey, isUnlocked, isPurchased }
+ */
+app.post('/api/player/progress', (req, res) => {
+    const playerId = req.headers['x-player-id'];
+    if (!playerId) return res.status(401).json({ message: 'Thiếu X-Player-Id header.' });
+
+    const { songKey, isUnlocked, isPurchased } = req.body;
+    if (!songKey) return res.status(400).json({ message: 'Thiếu songKey.' });
+
+    if (!playerProgress[playerId]) playerProgress[playerId] = {};
+    playerProgress[playerId][songKey] = { isUnlocked, isPurchased, updatedAt: Date.now() };
+
+    console.log(`[Progress] ${playerId}/${songKey}: unlocked=${isUnlocked}`);
+    res.json({ success: true });
+});
+
+/**
+ * POST /api/sync
+ * Header: X-Player-Id: <playerId>
+ * Body: { operations: [{ operationType, payload }] }
+ * Batch sync — gửi nhiều operations 1 lần (dùng khi flush SyncQueue).
+ */
+app.post('/api/sync', async (req, res) => {
+    const playerId = req.headers['x-player-id'];
+    if (!playerId) return res.status(401).json({ message: 'Thiếu X-Player-Id header.' });
+
+    const { operations } = req.body;
+    if (!Array.isArray(operations)) return res.status(400).json({ message: 'operations phải là array.' });
+
+    const results = [];
+
+    for (const op of operations) {
+        try {
+            const payload = JSON.parse(op.payload || '{}');
+
+            if (op.operationType === 'upload_score') {
+                if (!playerScores[playerId]) playerScores[playerId] = {};
+                const existing = playerScores[playerId][payload.songKey];
+                if (!existing || payload.score > existing.score) {
+                    playerScores[playerId][payload.songKey] = payload;
+                }
+                results.push({ type: op.operationType, success: true });
+            } else if (op.operationType === 'upload_settings') {
+                playerSettings[playerId] = payload;
+                results.push({ type: op.operationType, success: true });
+            } else if (op.operationType === 'upload_progress') {
+                if (!playerProgress[playerId]) playerProgress[playerId] = {};
+                playerProgress[playerId][payload.songKey] = payload;
+                results.push({ type: op.operationType, success: true });
+            } else {
+                results.push({ type: op.operationType, success: false, error: 'Unknown op type' });
+            }
+        } catch (e) {
+            results.push({ type: op.operationType, success: false, error: e.message });
+        }
+    }
+
+    console.log(`[Sync] Batch sync for ${playerId}: ${results.filter(r => r.success).length}/${results.length} succeeded.`);
+    res.json({ success: true, results });
+});
+
 app.listen(PORT, () => {
     console.log(`Backend is running on port ${PORT}`);
 });
