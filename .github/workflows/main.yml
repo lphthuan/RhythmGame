@@ -1,10 +1,13 @@
-name: Kiểm tra PR Unity (GameCI)
+name: Android Test & Build (PR Quality Gate)
 
+# Kích hoạt khi tạo PR vào nhánh main, hoặc chạy thủ công
 on:
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
+  workflow_dispatch:
 
-# Cấu hình biến môi trường để xác thực bản quyền Unity
+# Biến môi trường xác thực Unity (cấu hình tại Settings > Secrets)
+# Xem hướng dẫn: https://game.ci/docs/github/activation
 env:
   UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
   UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
@@ -15,54 +18,90 @@ jobs:
   # JOB 1: CHẠY KIỂM TRA LOGIC (UNITY TESTS)
   # ==========================================
   testRunner:
-    name: Unity Test Runner
+    name: "✅ Run Unity Tests"
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout mã nguồn
-        uses: actions/checkout@v4
-        with:
-          lfs: true # Bắt buộc bật để tải các file 3D/Audio nặng
-
-      - name: Cache Library (Tăng tốc độ chạy)
-        uses: actions/cache@v3
-        with:
-          path: Library
-          key: Library-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
-          restore-keys: |
-            Library-
-
-      - name: Chạy Unity Tests (EditMode & PlayMode)
-        uses: game-ci/unity-test-runner@v4
-        with:
-          projectPath: . # Thay đổi nếu thư mục gốc Unity của bạn nằm trong thư mục con
-          githubToken: ${{ secrets.GITHUB_TOKEN }}
-
-  # ==========================================
-  # JOB 2: KIỂM TRA BIÊN DỊCH (BUILD CHECK)
-  # ==========================================
-  buildCheck:
-    name: Unity Build Check (Windows 64)
-    needs: testRunner # Chỉ chạy build nếu Job testRunner ở trên đã Pass
-    runs-on: ubuntu-latest
-    steps:
+      # Bước 1: Kéo mã nguồn kèm Git LFS
       - name: Checkout mã nguồn
         uses: actions/checkout@v4
         with:
           lfs: true
 
-      - name: Cache Library
-        uses: actions/cache@v3
+      # Bước 2: Cache thư mục Library để tăng tốc lần chạy sau
+      - name: Cache Unity Library
+        uses: actions/cache@v4
         with:
           path: Library
-          key: Library-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          key: Library-Test-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
           restore-keys: |
-            Library-
+            Library-Test-
 
-      - name: Build Game (StandaloneWindows64)
+      # Bước 3: Chạy toàn bộ test (EditMode + PlayMode)
+      # GameCI tự đọc phiên bản Unity từ ProjectSettings/ProjectVersion.txt
+      - name: Chạy Unity Tests (EditMode & PlayMode)
+        uses: game-ci/unity-test-runner@v4
+        id: testRunner
+        with:
+          projectPath: .
+          testMode: all
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+
+      # Bước 4: Lưu kết quả test dù pass hay fail
+      - name: Upload kết quả Test
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Test-Results
+          path: ${{ steps.testRunner.outputs.artifactsPath }}
+
+  # ==========================================
+  # JOB 2: BUILD ANDROID APK
+  # Chỉ chạy khi JOB 1 (testRunner) PASS
+  # ==========================================
+  buildAndroid:
+    name: "🤖 Build Android"
+    needs: testRunner
+    runs-on: ubuntu-latest
+    steps:
+      # Bước 1: Giải phóng dung lượng đĩa (~10GB)
+      # Build Unity + Android SDK cần nhiều dung lượng, runner mặc định chỉ có ~14GB trống
+      - name: Giải phóng dung lượng đĩa
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+          dotnet: true
+          haskell: true
+          large-packages: true
+          swap-storage: true
+
+      # Bước 2: Kéo mã nguồn kèm Git LFS
+      - name: Checkout mã nguồn
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      # Bước 3: Cache Library cho build Android
+      - name: Cache Unity Library
+        uses: actions/cache@v4
+        with:
+          path: Library
+          key: Library-Android-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            Library-Android-
+
+      # Bước 4: Build APK
+      # GameCI tự đọc phiên bản Unity (6000.0.69f1) từ ProjectSettings/ProjectVersion.txt
+      # và tự tải Docker image phù hợp với Android module
+      - name: Build Android APK
         uses: game-ci/unity-builder@v4
         with:
           projectPath: .
-          targetPlatform: StandaloneWindows64
-          # Thiết lập này giúp quá trình build không thực sự xuất ra file .exe, 
-          # mà chỉ biên dịch mã nguồn để kiểm tra lỗi, giúp tiết kiệm thời gian Server.
-          buildMethod: UnityBuilderAction.Builder.BuildProject
+          targetPlatform: Android
+          versioning: None
+
+      # Bước 5: Upload file APK đã build
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Android-Build
+          path: build/Android
