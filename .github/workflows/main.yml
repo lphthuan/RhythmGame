@@ -1,22 +1,16 @@
-name: Android Test & Build (PR Quality Gate)
+name: Unity Test (PR Quality Gate)
 
-# Kích hoạt khi tạo PR vào nhánh main, hoặc chạy thủ công
 on:
   pull_request:
     branches: ["main"]
   workflow_dispatch:
 
-# Biến môi trường xác thực Unity (cấu hình tại Settings > Secrets)
-# Xem hướng dẫn: https://game.ci/docs/github/activation
 env:
   UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
   UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
   UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
 
 jobs:
-  # ==========================================
-  # JOB 1: CHẠY KIỂM TRA LOGIC (UNITY TESTS)
-  # ==========================================
   testRunner:
     name: "✅ Run Unity Tests"
     runs-on: ubuntu-latest
@@ -53,55 +47,3 @@ jobs:
         with:
           name: Test-Results
           path: ${{ steps.testRunner.outputs.artifactsPath }}
-
-  # ==========================================
-  # JOB 2: BUILD ANDROID APK
-  # Chỉ chạy khi JOB 1 (testRunner) PASS
-  # ==========================================
-  buildAndroid:
-    name: "🤖 Build Android"
-    needs: testRunner
-    runs-on: ubuntu-latest
-    steps:
-      # Bước 1: Giải phóng dung lượng đĩa (~10GB)
-      # Build Unity + Android SDK cần nhiều dung lượng, runner mặc định chỉ có ~14GB trống
-      - name: Giải phóng dung lượng đĩa
-        uses: jlumbroso/free-disk-space@main
-        with:
-          tool-cache: false
-          dotnet: true
-          haskell: true
-          large-packages: true
-          swap-storage: true
-
-      # Bước 2: Kéo mã nguồn kèm Git LFS
-      - name: Checkout mã nguồn
-        uses: actions/checkout@v4
-        with:
-          lfs: true
-
-      # Bước 3: Cache Library cho build Android
-      - name: Cache Unity Library
-        uses: actions/cache@v4
-        with:
-          path: Library
-          key: Library-Android-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
-          restore-keys: |
-            Library-Android-
-
-      # Bước 4: Build APK
-      # GameCI tự đọc phiên bản Unity (6000.0.69f1) từ ProjectSettings/ProjectVersion.txt
-      # và tự tải Docker image phù hợp với Android module
-      - name: Build Android APK
-        uses: game-ci/unity-builder@v4
-        with:
-          projectPath: .
-          targetPlatform: Android
-          versioning: None
-
-      # Bước 5: Upload file APK đã build
-      - name: Upload Build Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: Android-Build
-          path: build/Android
