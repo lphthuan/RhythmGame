@@ -1207,6 +1207,7 @@ GameObject:
   - component: {fileID: 216327819}
   - component: {fileID: 216327818}
   - component: {fileID: 216327817}
+  - component: {fileID: 216327820}
   m_Layer: 5
   m_Name: Btn_Minus
   m_TagString: Untagged
@@ -1277,19 +1278,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 216327818}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 1410977340}
-        m_TargetAssemblyTypeName: UIManager, Assembly-CSharp
-        m_MethodName: ChangeNoteSpeed
-        m_Mode: 4
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: -0.5
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
+      m_Calls: []
 --- !u!114 &216327818
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1328,6 +1317,35 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 216327815}
   m_CullTransparentMesh: 1
+--- !u!114 &216327820
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 216327815}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ea7f7c3844d231e49990f4885ac404a5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  onHold:
+    m_PersistentCalls:
+      m_Calls:
+      - m_Target: {fileID: 1410977340}
+        m_TargetAssemblyTypeName: UIManager, Assembly-CSharp
+        m_MethodName: ChangeNoteSpeed
+        m_Mode: 4
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: -0.1
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+  delayBeforeRepeat: 0.4
+  repeatInterval: 0.06
 --- !u!1 &234309064
 GameObject:
   m_ObjectHideFlags: 0
@@ -6045,6 +6063,7 @@ GameObject:
   - component: {fileID: 1106123251}
   - component: {fileID: 1106123250}
   - component: {fileID: 1106123249}
+  - component: {fileID: 1106123252}
   m_Layer: 5
   m_Name: Btn_Minus
   m_TagString: Untagged
@@ -6115,19 +6134,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1106123250}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 1410977340}
-        m_TargetAssemblyTypeName: UIManager, Assembly-CSharp
-        m_MethodName: ChangeVolume
-        m_Mode: 3
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: -1
-          m_FloatArgument: -0.5
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
+      m_Calls: []
 --- !u!114 &1106123250
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6166,6 +6173,35 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1106123247}
   m_CullTransparentMesh: 1
+--- !u!114 &1106123252
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1106123247}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ea7f7c3844d231e49990f4885ac404a5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  onHold:
+    m_PersistentCalls:
+      m_Calls:
+      - m_Target: {fileID: 1410977340}
+        m_TargetAssemblyTypeName: UIManager, Assembly-CSharp
+        m_MethodName: ChangeVolume
+        m_Mode: 3
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: -1
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+  delayBeforeRepeat: 0.4
+  repeatInterval: 0.06
 --- !u!1 &1138319525
 GameObject:
   m_ObjectHideFlags: 0
@@ -8155,6 +8191,7 @@ GameObject:
   - component: {fileID: 1355878627}
   - component: {fileID: 1355878626}
   - component: {fileID: 1355878625}
+  - component: {fileID: 1355878628}
   m_Layer: 5
   m_Name: Btn_Plus
   m_TagString: Untagged
@@ -8225,19 +8262,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1355878626}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 1410977340}
-        m_TargetAssemblyTypeName: UIManager, Assembly-CSharp
-        m_MethodName: ChangeNoteSpeed
-        m_Mode: 4
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0.5
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
+      m_Calls: []
 --- !u!114 &1355878626
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8276,6 +8301,35 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1355878623}
   m_CullTransparentMesh: 1
+--- !u!114 &1355878628
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1355878623}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ea7f7c3844d231e49990f4885ac404a5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  onHold:
+    m_PersistentCalls:
+      m_Calls:
+      - m_Target: {fileID: 1410977340}
+        m_TargetAssemblyTypeName: UIManager, Assembly-CSharp
+        m_MethodName: ChangeNoteSpeed
+        m_Mode: 4
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0.1
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+  delayBeforeRepeat: 0.4
+  repeatInterval: 0.06
 --- !u!1 &1383488982
 GameObject:
   m_ObjectHideFlags: 0
@@ -10221,6 +10275,7 @@ GameObject:
   - component: {fileID: 1651061342}
   - component: {fileID: 1651061341}
   - component: {fileID: 1651061340}
+  - component: {fileID: 1651061343}
   m_Layer: 5
   m_Name: Btn_Plus
   m_TagString: Untagged
@@ -10291,19 +10346,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1651061341}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 1410977340}
-        m_TargetAssemblyTypeName: UIManager, Assembly-CSharp
-        m_MethodName: ChangeAudioOffset
-        m_Mode: 3
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 1
-          m_FloatArgument: 0.5
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
+      m_Calls: []
 --- !u!114 &1651061341
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -10342,6 +10385,35 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1651061338}
   m_CullTransparentMesh: 1
+--- !u!114 &1651061343
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1651061338}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ea7f7c3844d231e49990f4885ac404a5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  onHold:
+    m_PersistentCalls:
+      m_Calls:
+      - m_Target: {fileID: 1410977340}
+        m_TargetAssemblyTypeName: UIManager, Assembly-CSharp
+        m_MethodName: ChangeAudioOffset
+        m_Mode: 3
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 1
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+  delayBeforeRepeat: 0.4
+  repeatInterval: 0.06
 --- !u!1 &1656949691
 GameObject:
   m_ObjectHideFlags: 0
@@ -11302,6 +11374,7 @@ GameObject:
   - component: {fileID: 1728116675}
   - component: {fileID: 1728116674}
   - component: {fileID: 1728116673}
+  - component: {fileID: 1728116676}
   m_Layer: 5
   m_Name: Btn_Plus
   m_TagString: Untagged
@@ -11372,19 +11445,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1728116674}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 1410977340}
-        m_TargetAssemblyTypeName: UIManager, Assembly-CSharp
-        m_MethodName: ChangeVolume
-        m_Mode: 3
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 1
-          m_FloatArgument: 0.5
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
+      m_Calls: []
 --- !u!114 &1728116674
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -11423,6 +11484,35 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1728116671}
   m_CullTransparentMesh: 1
+--- !u!114 &1728116676
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1728116671}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ea7f7c3844d231e49990f4885ac404a5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  onHold:
+    m_PersistentCalls:
+      m_Calls:
+      - m_Target: {fileID: 1410977340}
+        m_TargetAssemblyTypeName: UIManager, Assembly-CSharp
+        m_MethodName: ChangeVolume
+        m_Mode: 3
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 1
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+  delayBeforeRepeat: 0.4
+  repeatInterval: 0.06
 --- !u!1 &1756195131
 GameObject:
   m_ObjectHideFlags: 0
@@ -12893,6 +12983,7 @@ GameObject:
   - component: {fileID: 2126027816}
   - component: {fileID: 2126027815}
   - component: {fileID: 2126027814}
+  - component: {fileID: 2126027817}
   m_Layer: 5
   m_Name: Btn_Minus
   m_TagString: Untagged
@@ -12963,19 +13054,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 2126027815}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 1410977340}
-        m_TargetAssemblyTypeName: UIManager, Assembly-CSharp
-        m_MethodName: ChangeAudioOffset
-        m_Mode: 3
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: -1
-          m_FloatArgument: -0.5
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
+      m_Calls: []
 --- !u!114 &2126027815
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -13014,6 +13093,35 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2126027812}
   m_CullTransparentMesh: 1
+--- !u!114 &2126027817
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2126027812}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ea7f7c3844d231e49990f4885ac404a5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  onHold:
+    m_PersistentCalls:
+      m_Calls:
+      - m_Target: {fileID: 1410977340}
+        m_TargetAssemblyTypeName: UIManager, Assembly-CSharp
+        m_MethodName: ChangeAudioOffset
+        m_Mode: 3
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: -1
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+  delayBeforeRepeat: 0.4
+  repeatInterval: 0.06
 --- !u!1 &2138425411
 GameObject:
   m_ObjectHideFlags: 0
