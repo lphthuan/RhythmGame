@@ -465,8 +465,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1113412420}
-  - component: {fileID: 1113412419}
   - component: {fileID: 1113412418}
+  - component: {fileID: 1113412419}
   m_Layer: 0
   m_Name: AudioSystems
   m_TagString: Untagged
@@ -483,7 +483,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 1113412417}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 25cf6aaa8fb315248b52c66396ebb4fe, type: 3}
+  m_Script: {fileID: 11500000, guid: 157f9c3bccd98e049af713cb611e9b17, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   musicSource: {fileID: 1463809305}
@@ -508,7 +508,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 1113412417}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: db030922e936f6049bf667656c1eb6bd, type: 3}
+  m_Script: {fileID: 11500000, guid: acf69fe5fe7f3664d9847f7e86e953ff, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   bpm: 120
@@ -564,6 +564,7 @@ MonoBehaviour:
   receiverBehaviours:
   - {fileID: 512663225}
   - {fileID: 1673898720}
+  - {fileID: 2131376831}
 --- !u!4 &1150528995
 Transform:
   m_ObjectHideFlags: 0
