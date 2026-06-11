@@ -170,19 +170,14 @@ public class RhythmTimeManager : MonoBehaviour
 		}
 
 		Instance = this;
-
 		DontDestroyOnLoad(gameObject);
 	}
-
 	// ==========================================================
-	// START SONG
+	// STARTSONG
 	// ==========================================================
-
 	public void StartSong()
 	{
-		if (
-			AudioManager.Instance == null
-		)
+		if (AudioManager.Instance == null)
 		{
 			Debug.LogError(
 				"[RhythmTimeManager] Missing AudioManager"
@@ -203,13 +198,50 @@ public class RhythmTimeManager : MonoBehaviour
 		wasPlaying = true;
 
 		isPaused = false;
-
-		if (enableDebugLog)
+	}
+	private void Start()
+	{
+		if (Instance != this)
 		{
-			Debug.Log(
-				"[RhythmTimeManager] Song Started"
-			);
+			return;
 		}
+
+		if (AudioManager.Instance == null)
+		{
+			Debug.LogError(
+				"[RhythmTimeManager] AudioManager Missing"
+			);
+
+			return;
+		}
+
+		AudioSource musicSource =
+			AudioManager.Instance
+				.GetMusicSource();
+
+		if (musicSource == null)
+		{
+			Debug.LogError(
+				"[RhythmTimeManager] MusicSource Missing"
+			);
+
+			return;
+		}
+
+		if (musicSource.clip == null)
+		{
+			Debug.LogError(
+				"[RhythmTimeManager] Music Clip Missing"
+			);
+
+			return;
+		}
+
+		Debug.Log(
+			"[RhythmTimeManager] Auto Start Song"
+		);
+
+		StartSong();
 	}
 
 	// ==========================================================
