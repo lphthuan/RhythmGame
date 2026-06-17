@@ -6,11 +6,14 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/_Game/Scenes/Sandbox/nttin/NotePrototypeTestScene.unity
-    guid: 2d8f6425f1c28cd499f0d87a545a77a1
-  - enabled: 1
     path: Assets/_Game/Scenes/Core/StartScene.unity
     guid: 8c9cfa26abfee488c85f1582747f6a02
+  - enabled: 1
+    path: Assets/_Game/Scenes/Core/MusicSelectionScene.unity
+    guid: 19c75c4931ed59a4bb7cb9947c3b310e
+  - enabled: 1
+    path: Assets/_Game/Scenes/Core/GameplayScene/DemoSong1.unity
+    guid: 64bf942d53dd3cf4db2e4d9dd4c2e50b
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   m_UseUCBPForAssetBundles: 0

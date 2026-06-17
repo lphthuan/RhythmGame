@@ -53,6 +53,8 @@ public class RhythmTimeManager : MonoBehaviour
 
 	private bool isPaused;
 
+	public bool IsPaused => isPaused;
+
 	// ==========================================================
 	// DEBUG
 	// ==========================================================
@@ -137,8 +139,6 @@ public class RhythmTimeManager : MonoBehaviour
 		{
 			return;
 		}
-
-		HandlePauseInput();
 
 		HandlePauseResume();
 
@@ -265,35 +265,7 @@ public class RhythmTimeManager : MonoBehaviour
 		}
 	}
 
-	// ==========================================================
-	// PAUSE INPUT
-	// ==========================================================
 
-	private void HandlePauseInput()
-	{
-		if (
-			Keyboard.current == null
-		)
-		{
-			return;
-		}
-
-		if (
-			Keyboard.current
-				.escapeKey
-				.wasPressedThisFrame
-		)
-		{
-			if (isPaused)
-			{
-				ResumeGame();
-			}
-			else
-			{
-				PauseGame();
-			}
-		}
-	}
 
 	// ==========================================================
 	// DSP RESYNC

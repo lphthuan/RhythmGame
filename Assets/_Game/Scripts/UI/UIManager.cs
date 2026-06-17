@@ -1,9 +1,15 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using System.Collections;
+using UnityEngine.InputSystem;
 
 public class UIManager : MonoBehaviour
 {
+    [Header("Scene Configuration")]
+    [Tooltip("Đánh dấu true nếu UIManager này nằm trong scene Gameplay")]
+    public bool isGameplayScene = false;
+
     [Header("Main Panels")]
     public GameObject lobbyPanel;
     public GameObject gameplayPanel;
@@ -11,6 +17,9 @@ public class UIManager : MonoBehaviour
     [Header("Popups")]
     public GameObject settingsPopup;
     public GameObject pausePopup;
+    public TextMeshProUGUI countdownText;
+
+    private bool isCountingDown = false;
 
     [Header("Settings Tabs Content")]
     public GameObject contentAudio;
@@ -67,12 +76,50 @@ public class UIManager : MonoBehaviour
     private int lateEarlyPosIndex = 0;
     private string[] lateEarlyPositions = { "Middle", "Top", "Bottom" };
 
-    private void Start() { OpenLobby(); LoadSettings(); }
+    private void Start() 
+    { 
+        LoadSettings(); 
+        if (isGameplayScene) 
+        {
+            StartGame();
+        }
+        else 
+        {
+            OpenLobby(); 
+        }
+    }
+
+    private void Update()
+    {
+        if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
+        {
+            if (gameplayPanel != null && gameplayPanel.activeSelf)
+            {
+                if (pausePopup != null && pausePopup.activeSelf)
+                {
+                    if (!isCountingDown)
+                        ResumeGame();
+                }
+                else
+                {
+                    PauseGame();
+                }
+            }
+        }
+    }
 
     // --- CHUYỂN ĐỔI STATE TRÒ CHƠI ---
     public void OpenLobby() { TogglePanel(true, false, false, false); Time.timeScale = 1f; }
     public void StartGame() { TogglePanel(false, true, false, false); }
-    public void OpenSettings() { settingsPopup.SetActive(true); OpenTabGameplay(); }
+    public void OpenSettings() 
+    { 
+        if (settingsPopup != null)
+        {
+            settingsPopup.SetActive(true); 
+            settingsPopup.transform.SetAsLastSibling();
+        }
+        OpenTabGameplay(); 
+    }
     public void CloseSettingsAndSave() { SaveSettings(); settingsPopup.SetActive(false); }
 
     private void TogglePanel(bool lobby, bool gameplay, bool settings, bool pause)
@@ -160,8 +207,77 @@ public class UIManager : MonoBehaviour
         lateEarlyPosIndex = PlayerPrefs.GetInt("VisualLateEarlyPos", 0); textLateEarlyPosition.text = lateEarlyPositions[lateEarlyPosIndex];
     }
 
-    public void PauseGame() { pausePopup.SetActive(true); Time.timeScale = 0f; }
-    public void ResumeGame() { pausePopup.SetActive(false); Time.timeScale = 1f; }
-    public void RetryGame() { pausePopup.SetActive(false); gameplayPanel.SetActive(true); Time.timeScale = 1f; }
-    public void QuitToLobby() { OpenLobby(); }
+    public void PauseGame() 
+    { 
+        if (isCountingDown) return;
+        
+        if (pausePopup != null)
+        {
+            pausePopup.SetActive(true); 
+            pausePopup.transform.SetAsLastSibling();
+        }
+        
+        if (countdownText != null) countdownText.gameObject.SetActive(false);
+        Time.timeScale = 0f; 
+        if (RhythmTimeManager.Instance != null) RhythmTimeManager.Instance.PauseGame();
+    }
+    
+    public void ResumeGame() 
+    { 
+        if (!pausePopup.activeSelf || isCountingDown) return;
+        StartCoroutine(ResumeCountdownCoroutine()); 
+    }
+
+    private IEnumerator ResumeCountdownCoroutine()
+    {
+        isCountingDown = true;
+        
+        // Ẩn menu Pause ngay lập tức
+        if (pausePopup != null) pausePopup.SetActive(false);
+
+        if (countdownText != null)
+        {
+            countdownText.gameObject.SetActive(true);
+            countdownText.transform.SetAsLastSibling(); // Đảm bảo số đếm ngược luôn đè lên trên cùng
+            for (int i = 3; i > 0; i--)
+            {
+                countdownText.text = i.ToString();
+                yield return new WaitForSecondsRealtime(1f);
+            }
+            countdownText.text = "GO!";
+            yield return new WaitForSecondsRealtime(0.5f);
+            countdownText.gameObject.SetActive(false);
+        }
+        else
+        {
+            yield return new WaitForSecondsRealtime(1f);
+        }
+
+        Time.timeScale = 1f; 
+        isCountingDown = false;
+        
+        if (RhythmTimeManager.Instance != null) RhythmTimeManager.Instance.ResumeGame();
+    }
+
+    public void RetryGame() 
+    { 
+        isCountingDown = false;
+        StopAllCoroutines();
+        
+        if (GameManager.Instance != null) 
+            GameManager.Instance.RetryGame();
+        else
+            Debug.LogError("[UIManager] GameManager.Instance is null! Cannot retry.");
+    }
+    
+    public void QuitToLobby() 
+    { 
+        isCountingDown = false;
+        StopAllCoroutines();
+        
+        if (GameManager.Instance != null) 
+            GameManager.Instance.QuitToLobby();
+        else
+            Debug.LogError("[UIManager] GameManager.Instance is null! Cannot quit.");
+    }
 }
