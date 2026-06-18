@@ -1,0 +1,741 @@
+fileFormatVersion: 2
+guid: c37da1909c63eb2428f1da721d0e3302
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: -4086557526694802961
+    second: diamon_0
+  - first:
+      213: 3781217729317861038
+    second: diamon_1
+  - first:
+      213: 924032624230351386
+    second: diamon_2
+  - first:
+      213: -1755192308183662196
+    second: diamon_3
+  - first:
+      213: -7249258735607658463
+    second: diamon_4
+  - first:
+      213: -7477805527400940376
+    second: diamon_5
+  - first:
+      213: -3145077730372462124
+    second: diamon_6
+  - first:
+      213: -2294240403233243049
+    second: diamon_7
+  - first:
+      213: -9132758468633917515
+    second: diamon_8
+  - first:
+      213: -2417140523423635163
+    second: diamon_9
+  - first:
+      213: 289939828339704669
+    second: diamon_10
+  - first:
+      213: -6877872487066815126
+    second: diamon_11
+  - first:
+      213: -8056325678243063137
+    second: diamon_12
+  - first:
+      213: -3600238807268430515
+    second: diamon_13
+  - first:
+      213: -6877644877477003045
+    second: diamon_14
+  - first:
+      213: 3933010506657028368
+    second: diamon_15
+  - first:
+      213: 3813286059689461027
+    second: diamon_16
+  - first:
+      213: 326112222032196161
+    second: diamon_17
+  - first:
+      213: -2197959689924565603
+    second: diamon_18
+  - first:
+      213: -6052933888361067123
+    second: diamon_19
+  - first:
+      213: 3840877283180239097
+    second: diamon_20
+  - first:
+      213: -8945635572144932976
+    second: diamon_21
+  - first:
+      213: -564304493038936776
+    second: diamon_22
+  - first:
+      213: 914619296958192377
+    second: diamon_23
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: diamon_0
+      rect:
+        serializedVersion: 2
+        x: 40
+        y: 205
+        width: 260
+        height: 268
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fe9482bb491a947c0800000000000000
+      internalID: -4086557526694802961
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: diamon_1
+      rect:
+        serializedVersion: 2
+        x: 353
+        y: 387
+        width: 94
+        height: 97
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ea67666bd75997430800000000000000
+      internalID: 3781217729317861038
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: diamon_2
+      rect:
+        serializedVersion: 2
+        x: 474
+        y: 386
+        width: 98
+        height: 100
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a124f18a6c2d2dc00800000000000000
+      internalID: 924032624230351386
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: diamon_3
+      rect:
+        serializedVersion: 2
+        x: 597
+        y: 386
+        width: 97
+        height: 100
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c81073625ed44a7e0800000000000000
+      internalID: -1755192308183662196
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: diamon_4
+      rect:
+        serializedVersion: 2
+        x: 720
+        y: 386
+        width: 96
+        height: 100
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 12845339695756b90800000000000000
+      internalID: -7249258735607658463
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: diamon_5
+      rect:
+        serializedVersion: 2
+        x: 840
+        y: 386
+        width: 97
+        height: 100
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8ac70dfed7f793890800000000000000
+      internalID: -7477805527400940376
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: diamon_6
+      rect:
+        serializedVersion: 2
+        x: 350
+        y: 351
+        width: 101
+        height: 32
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4d95822b7707a54d0800000000000000
+      internalID: -3145077730372462124
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: diamon_7
+      rect:
+        serializedVersion: 2
+        x: 473
+        y: 351
+        width: 101
+        height: 32
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7500fe732883920e0800000000000000
+      internalID: -2294240403233243049
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: diamon_8
+      rect:
+        serializedVersion: 2
+        x: 594
+        y: 351
+        width: 102
+        height: 32
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5b782a96f8ce14180800000000000000
+      internalID: -9132758468633917515
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: diamon_9
+      rect:
+        serializedVersion: 2
+        x: 716
+        y: 351
+        width: 101
+        height: 32
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 529e1212087947ed0800000000000000
+      internalID: -2417140523423635163
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: diamon_10
+      rect:
+        serializedVersion: 2
+        x: 839
+        y: 351
+        width: 100
+        height: 32
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d530d6adcb2160400800000000000000
+      internalID: 289939828339704669
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: diamon_11
+      rect:
+        serializedVersion: 2
+        x: 341
+        y: 199
+        width: 93
+        height: 79
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a6533fdd963ec80a0800000000000000
+      internalID: -6877872487066815126
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: diamon_12
+      rect:
+        serializedVersion: 2
+        x: 452
+        y: 202
+        width: 109
+        height: 96
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f9ad679da7e223090800000000000000
+      internalID: -8056325678243063137
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: diamon_13
+      rect:
+        serializedVersion: 2
+        x: 575
+        y: 205
+        width: 108
+        height: 108
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d4d603231e1690ec0800000000000000
+      internalID: -3600238807268430515
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: diamon_14
+      rect:
+        serializedVersion: 2
+        x: 697
+        y: 202
+        width: 116
+        height: 116
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: bd0c2ba5c62bd80a0800000000000000
+      internalID: -6877644877477003045
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: diamon_15
+      rect:
+        serializedVersion: 2
+        x: 820
+        y: 198
+        width: 126
+        height: 119
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 019db23c73cd49630800000000000000
+      internalID: 3933010506657028368
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: diamon_16
+      rect:
+        serializedVersion: 2
+        x: 335
+        y: 163
+        width: 105
+        height: 32
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3254db6b7738be430800000000000000
+      internalID: 3813286059689461027
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: diamon_17
+      rect:
+        serializedVersion: 2
+        x: 455
+        y: 163
+        width: 105
+        height: 32
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 142742f8655968400800000000000000
+      internalID: 326112222032196161
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: diamon_18
+      rect:
+        serializedVersion: 2
+        x: 576
+        y: 163
+        width: 106
+        height: 32
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d952b6bae474f71e0800000000000000
+      internalID: -2197959689924565603
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: diamon_19
+      rect:
+        serializedVersion: 2
+        x: 698
+        y: 163
+        width: 106
+        height: 32
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d8d8057c2b8affba0800000000000000
+      internalID: -6052933888361067123
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: diamon_20
+      rect:
+        serializedVersion: 2
+        x: 818
+        y: 163
+        width: 119
+        height: 32
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9f853d90a898d4530800000000000000
+      internalID: 3840877283180239097
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: diamon_21
+      rect:
+        serializedVersion: 2
+        x: 48
+        y: 47
+        width: 237
+        height: 58
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 097f338d7d7bad380800000000000000
+      internalID: -8945635572144932976
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: diamon_22
+      rect:
+        serializedVersion: 2
+        x: 336
+        y: 38
+        width: 244
+        height: 82
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 83dd14bad003b28f0800000000000000
+      internalID: -564304493038936776
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: diamon_23
+      rect:
+        serializedVersion: 2
+        x: 619
+        y: 36
+        width: 307
+        height: 91
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9fa19eb976161bc00800000000000000
+      internalID: 914619296958192377
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      diamon_0: -4086557526694802961
+      diamon_1: 3781217729317861038
+      diamon_10: 289939828339704669
+      diamon_11: -6877872487066815126
+      diamon_12: -8056325678243063137
+      diamon_13: -3600238807268430515
+      diamon_14: -6877644877477003045
+      diamon_15: 3933010506657028368
+      diamon_16: 3813286059689461027
+      diamon_17: 326112222032196161
+      diamon_18: -2197959689924565603
+      diamon_19: -6052933888361067123
+      diamon_2: 924032624230351386
+      diamon_20: 3840877283180239097
+      diamon_21: -8945635572144932976
+      diamon_22: -564304493038936776
+      diamon_23: 914619296958192377
+      diamon_3: -1755192308183662196
+      diamon_4: -7249258735607658463
+      diamon_5: -7477805527400940376
+      diamon_6: -3145077730372462124
+      diamon_7: -2294240403233243049
+      diamon_8: -9132758468633917515
+      diamon_9: -2417140523423635163
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

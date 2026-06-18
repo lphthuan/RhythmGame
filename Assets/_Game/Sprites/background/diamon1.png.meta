@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 42281ab6883cdf440ba08e69474d949d
+guid: 3718f36c17857544fb6e7514f7fe62b0
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -7963365235869120616
-    second: Screenshot 2026-06-11 141455_0
+      213: -7723711029805666530
+    second: diamon1_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -100,13 +100,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Screenshot 2026-06-11 141455_0
+      name: diamon1_0
       rect:
         serializedVersion: 2
-        x: 0
-        y: 0
-        width: 855
-        height: 472
+        x: 56
+        y: 110
+        width: 1175
+        height: 662
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -115,8 +115,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 897835b72817c7190800000000000000
-      internalID: -7963365235869120616
+      spriteID: e1faaa88dbddfc490800000000000000
+      internalID: -7723711029805666530
       vertices: []
       indices: 
       edges: []
@@ -135,7 +135,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      Screenshot 2026-06-11 141455_0: -7963365235869120616
+      diamon1_0: -7723711029805666530
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

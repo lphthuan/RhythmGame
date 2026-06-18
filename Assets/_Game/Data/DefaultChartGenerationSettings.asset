@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: DefaultChartGenerationSettings
   m_EditorClassIdentifier: 
   difficulty: 0
-  bpm: 160
+  bpm: 172.5
   offset: 0
   laneCount: 4
   subdivision: 1
