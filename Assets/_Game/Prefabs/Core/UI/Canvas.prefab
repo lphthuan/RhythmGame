@@ -7526,14 +7526,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 1, g: 1, b: 1, a: 0.7764706}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: -7963365235869120616, guid: ebaadbbcec5bef04e9bfdf9a46384b70, type: 3}
+  m_Sprite: {fileID: -4176803228784187437, guid: 4edefae4f09149c4e9158f045bf4d6fa, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -9097,14 +9097,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 1, g: 1, b: 1, a: 0.7764706}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: -7963365235869120616, guid: ebaadbbcec5bef04e9bfdf9a46384b70, type: 3}
+  m_Sprite: {fileID: -4176803228784187437, guid: 4edefae4f09149c4e9158f045bf4d6fa, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -10070,6 +10070,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5c75e6d0f5cf2924aae7993246a8ad78, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  isGameplayScene: 0
   lobbyPanel: {fileID: 1502099170242203825}
   gameplayPanel: {fileID: 5697949393454435610}
   settingsPopup: {fileID: 6582128622160248752}
@@ -10711,14 +10712,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 0.9764706}
+  m_Color: {r: 1, g: 1, b: 1, a: 0.7764706}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: -7963365235869120616, guid: ebaadbbcec5bef04e9bfdf9a46384b70, type: 3}
+  m_Sprite: {fileID: -4176803228784187437, guid: 4edefae4f09149c4e9158f045bf4d6fa, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
