@@ -104,6 +104,7 @@ public class ChartNoteSpawner : MonoBehaviour
     private void Start()
     {
         LoadPersistedScrollSpeed();
+        GameplaySongBackdrop.Apply();
 
         // ─── EDIT MODE: chỉ xem preview, không spawn runtime notes ───────────
         if (editMode)
@@ -163,14 +164,17 @@ public class ChartNoteSpawner : MonoBehaviour
         SongData selectedSong = SelectedSongManager.Instance != null
             ? SelectedSongManager.Instance.SelectedSong
             : null;
+        Difficulty selectedDifficulty = SelectedSongManager.Instance != null
+            ? SelectedSongManager.Instance.SelectedDifficulty
+            : Difficulty.Medium;
 
         if (selectedSong != null)
         {
-            string computedName = selectedSong.ComputedChartFileName;
+            string computedName = selectedSong.GetChartFileName(selectedDifficulty);
             if (!string.IsNullOrEmpty(computedName))
             {
                 fileToLoad = computedName;
-                Debug.Log($"ChartNoteSpawner: Chart từ SelectedSongManager: '{fileToLoad}'");
+                Debug.Log($"ChartNoteSpawner: Chart từ SelectedSongManager ({selectedDifficulty}): '{fileToLoad}'");
             }
 
             // Đổi AudioClip sang nhạc của bài được chọn

@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c8f7d430bcc8bb4f986a97d225050e1, type: 3}
+  m_Name: alan_walkeralone
+  m_EditorClassIdentifier: 
+  _songTitle: Alan Walker - Alone
+  _sceneName: KhoaCuBu
+  _previewImage: {fileID: 21300000, guid: 535015d7d88e42645be21e7d81f93a95, type: 3}
+  _bpm: 97.3
+  _difficulty: Normal
+  songGroupId: alan_walkeralone
+  difficultyLevel: 1
+  unlockType: 0
+  chartFileName: 
+  audioClip: {fileID: 8300000, guid: 7437a0a7443747942ac95f328ef37b07, type: 3}
+  timelineAsset: {fileID: 0}
+  easyChartFileName: chart_alone_easy
+  normalChartFileName: chart_alone_medium
+  hardChartFileName: chart_alone_hard
+  easyTimelineAsset: {fileID: 11400000, guid: ae77bfb9626003b47b2139c3155a6284, type: 2}
+  normalTimelineAsset: {fileID: 11400000, guid: 403c059902a60ee4192c3eb43f3df5c6, type: 2}
+  hardTimelineAsset: {fileID: 11400000, guid: 408da17e64cdfd342a5eef15d7212c8e, type: 2}

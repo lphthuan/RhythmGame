@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9a0313bfa62342a0a831dde59d6a1764, type: 3}
+  m_Name: "\u30CA\u30CA\u30DB\u30B7\u7BA1\u5F26\u697D\u56E3_feat_\u521D\u97F3_\u30DF\u30AF\u30EB\u30FC\u30D3\u30C3\u30AF\u30AD\u30E5\u30FC\u30D6_easy_timeline"
+  m_EditorClassIdentifier: 
+  m_Version: 0
+  m_Tracks: []
+  m_FixedDuration: 0
+  m_EditorSettings:
+    m_Framerate: 60
+    m_ScenePreview: 1
+  m_DurationMode: 0
+  m_MarkerTrack: {fileID: 0}
+  m_Bpm: 174
+  m_OverrideNoteSpeed: 0
+  m_NoteSpeed: 3
+  m_FullName: "\u30CA\u30CA\u30DB\u30B7\u7BA1\u5F26\u697D\u56E3 feat. \u521D\u97F3
+    \u30DF\u30AF - \u30EB\u30FC\u30D3\u30C3\u30AF\u30AD\u30E5\u30FC\u30D6 [Ichi's
+    EZ]"
+  m_Authour: 
+  m_Description: 
+  m_Dificulty: 0
+  m_AudioClip: {fileID: 8300000, guid: c339d3fe8f8419648bfe929add785cd1, type: 3}
+  m_StartScore: 0
+  m_MaxScore: -1
+  m_MinScore: 0
+  m_PreventMaxScoreOvershoot: 0
+  m_PreventMinScoreOvershoot: 0
+  m_HighScore:
+    m_NoteAccuracyIDHistogram: 
+    m_FullScore: 0
+    m_MaxChain: 0

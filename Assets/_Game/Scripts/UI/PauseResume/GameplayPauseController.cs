@@ -10,7 +10,7 @@ public class GameplayPauseController : MonoBehaviour
     [SerializeField] private ChartPlaybackClock playbackClock;
 
     [Header("Navigation")]
-    [SerializeField] private string songSelectSceneName = "SongSelect";
+    [SerializeField] private string songSelectSceneName = "MusicSelectionScene";
 
     [Header("Generated UI")]
     [SerializeField] private bool buildRuntimeUi = true;

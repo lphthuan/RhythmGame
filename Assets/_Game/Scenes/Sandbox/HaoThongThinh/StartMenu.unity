@@ -137,6 +137,7 @@ GameObject:
   - component: {fileID: 253327354}
   - component: {fileID: 253327353}
   - component: {fileID: 253327357}
+  - component: {fileID: 253327358}
   m_Layer: 5
   m_Name: Canvas
   m_TagString: Untagged
@@ -241,6 +242,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   settingPanel: {fileID: 0}
   gameplaySceneName: SongSelect
+--- !u!114 &253327358
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 253327352}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 71b0a95d73cb00745a2f3c54f6a69a2c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mainMenuBackground: {fileID: 21300000, guid: 5c300ed83b4582249bb971893797b460, type: 3}
 --- !u!1 &407825990
 GameObject:
   m_ObjectHideFlags: 0

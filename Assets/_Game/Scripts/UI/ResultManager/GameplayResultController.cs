@@ -16,7 +16,7 @@ public class GameplayResultController : MonoBehaviour
     [SerializeField, Min(0f)] private float showDelaySeconds = 2f;
 
     [Header("Navigation")]
-    [SerializeField] private string songSelectSceneName = "SongSelect";
+    [SerializeField] private string songSelectSceneName = "MusicSelectionScene";
     [SerializeField] private bool wireResultButtons = true;
 
     private int _perfect;
@@ -101,7 +101,11 @@ public class GameplayResultController : MonoBehaviour
         resultOverlay.SetActive(true);
         WireResultButtons();
         int maxCombo = comboManager != null ? comboManager.MaxCombo : _perfect + _great + _good;
-        resultPro.Show(new GameplayResultData(_perfect, _great, _good, _miss, maxCombo));
+        GameplayResultData result = new GameplayResultData(_perfect, _great, _good, _miss, maxCombo);
+        ResultSongBackdrop.Apply(resultOverlay);
+        SongData selectedSong = SelectedSongManager.Instance != null ? SelectedSongManager.Instance.SelectedSong : null;
+        SongPlayStats.Save(selectedSong, result);
+        resultPro.Show(result);
     }
 
     public void RetryGame()

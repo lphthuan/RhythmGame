@@ -11,6 +11,8 @@ public static class OsuManiaBeatmapParser
         public readonly ChartData Chart;
         public readonly string AudioFileName;
         public readonly string AudioFilePath;
+        public readonly string BackgroundFileName;
+        public readonly string BackgroundFilePath;
         public readonly string Title;
         public readonly string Artist;
         public readonly string Version;
@@ -20,6 +22,8 @@ public static class OsuManiaBeatmapParser
             ChartData chart,
             string audioFileName,
             string audioFilePath,
+            string backgroundFileName,
+            string backgroundFilePath,
             string title,
             string artist,
             string version,
@@ -28,6 +32,8 @@ public static class OsuManiaBeatmapParser
             Chart = chart;
             AudioFileName = audioFileName;
             AudioFilePath = audioFilePath;
+            BackgroundFileName = backgroundFileName;
+            BackgroundFilePath = backgroundFilePath;
             Title = title;
             Artist = artist;
             Version = version;
@@ -42,7 +48,8 @@ public static class OsuManiaBeatmapParser
         Metadata,
         Difficulty,
         TimingPoints,
-        HitObjects
+        HitObjects,
+        Events
     }
 
     public static bool TryParse(string osuFilePath, out ImportResult result, out string error)
@@ -58,6 +65,7 @@ public static class OsuManiaBeatmapParser
 
         string directory = Path.GetDirectoryName(osuFilePath);
         string audioFileName = string.Empty;
+        string backgroundFileName = string.Empty;
         string title = Path.GetFileNameWithoutExtension(osuFilePath);
         string artist = string.Empty;
         string version = string.Empty;
@@ -105,6 +113,10 @@ public static class OsuManiaBeatmapParser
                     }
                     break;
 
+                case Section.Events:
+                    ReadEvents(line, ref backgroundFileName);
+                    break;
+
                 case Section.HitObjects:
                     if (TryReadNote(line, laneCount, out NoteData note))
                         notes.Add(note);
@@ -145,11 +157,16 @@ public static class OsuManiaBeatmapParser
         string audioPath = string.IsNullOrWhiteSpace(audioFileName) || string.IsNullOrWhiteSpace(directory)
             ? string.Empty
             : Path.Combine(directory, audioFileName);
+        string backgroundPath = string.IsNullOrWhiteSpace(backgroundFileName) || string.IsNullOrWhiteSpace(directory)
+            ? string.Empty
+            : Path.Combine(directory, backgroundFileName);
 
         result = new ImportResult(
             chart,
             audioFileName,
             audioPath,
+            backgroundFileName,
+            backgroundPath,
             title,
             artist,
             version,
@@ -167,6 +184,21 @@ public static class OsuManiaBeatmapParser
             audioFileName = value;
         else if (key.Equals("Mode", StringComparison.OrdinalIgnoreCase))
             mode = ParseInt(value, mode);
+    }
+
+    private static void ReadEvents(string line, ref string backgroundFileName)
+    {
+        if (!string.IsNullOrWhiteSpace(backgroundFileName))
+            return;
+
+        string[] fields = line.Split(',');
+        if (fields.Length < 3)
+            return;
+
+        if (fields[0].Trim() != "0")
+            return;
+
+        backgroundFileName = fields[2].Trim().Trim('"');
     }
 
     private static void ReadMetadata(
@@ -265,6 +297,7 @@ public static class OsuManiaBeatmapParser
             "Difficulty" => Section.Difficulty,
             "TimingPoints" => Section.TimingPoints,
             "HitObjects" => Section.HitObjects,
+            "Events" => Section.Events,
             _ => Section.None
         };
     }

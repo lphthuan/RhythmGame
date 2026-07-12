@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c8f7d430bcc8bb4f986a97d225050e1, type: 3}
+  m_Name: Electric_sister_bitch
+  m_EditorClassIdentifier: 
+  _songTitle: t+pazolite - Electric "Sister" Bitch
+  _sceneName: KhoaCuBu
+  _previewImage: {fileID: -4348606837186673230, guid: 16bd724d6916c154bb392a835951f6ef, type: 3}
+  _bpm: 185.00002
+  _difficulty: Normal
+  songGroupId: tpazoliteelectric_sister_bitch
+  difficultyLevel: 1
+  unlockType: 0
+  chartFileName: chart_tpazolite_electric_sister_bitch
+  audioClip: {fileID: 8300000, guid: 2e6bc7b1a87864b458174375ed9d714f, type: 3}
+  timelineAsset: {fileID: 0}
+  easyChartFileName: chart_tpazolite_electric_sister_bitch_easy
+  normalChartFileName: chart_tpazolite_electric_sister_bitch_Normal
+  hardChartFileName: chart_tpazolite_electric_sister_bitch_medium
+  easyTimelineAsset: {fileID: 11400000, guid: a27fa88bd604d654e8c8947018ec400b, type: 2}
+  normalTimelineAsset: {fileID: 11400000, guid: 206cfbd73a43ef94a9a72edd2760b56a, type: 2}
+  hardTimelineAsset: {fileID: 11400000, guid: ca101c2d0fc64274c912060bcfc64354, type: 2}

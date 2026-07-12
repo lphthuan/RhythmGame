@@ -9,6 +9,8 @@ public class UIManager : MonoBehaviour
     [Header("Scene Configuration")]
     [Tooltip("Đánh dấu true nếu UIManager này nằm trong scene Gameplay")]
     public bool isGameplayScene = false;
+    [Tooltip("Chỉ dùng CanvasThai như popup Settings, không bật Lobby hoặc Gameplay panel khi scene mở.")]
+    [SerializeField] private bool settingsOverlayOnly = false;
 
     [Header("Main Panels")]
     public GameObject lobbyPanel;
@@ -20,6 +22,7 @@ public class UIManager : MonoBehaviour
     public TextMeshProUGUI countdownText;
 
     private bool isCountingDown = false;
+    private const int SettingsOverlaySortingOrder = 1000;
 
     [Header("Settings Tabs Content")]
     public GameObject contentAudio;
@@ -79,6 +82,12 @@ public class UIManager : MonoBehaviour
     private void Start() 
     { 
         LoadSettings(); 
+        if (settingsOverlayOnly)
+        {
+            TogglePanel(false, false, false, false);
+            return;
+        }
+
         if (isGameplayScene) 
         {
             StartGame();
@@ -111,8 +120,22 @@ public class UIManager : MonoBehaviour
     // --- CHUYỂN ĐỔI STATE TRÒ CHƠI ---
     public void OpenLobby() { TogglePanel(true, false, false, false); Time.timeScale = 1f; }
     public void StartGame() { TogglePanel(false, true, false, false); }
+    public void PrepareAsSettingsOverlay()
+    {
+        settingsOverlayOnly = true;
+        TogglePanel(false, false, false, false);
+        BringSettingsCanvasToFront();
+        Time.timeScale = 1f;
+    }
+
     public void OpenSettings() 
     { 
+        if (!gameObject.activeSelf)
+            gameObject.SetActive(true);
+
+        BringSettingsCanvasToFront();
+        TogglePanel(false, false, true, false);
+
         if (settingsPopup != null)
         {
             settingsPopup.SetActive(true); 
@@ -121,6 +144,19 @@ public class UIManager : MonoBehaviour
         OpenTabGameplay(); 
     }
     public void CloseSettingsAndSave() { SaveSettings(); settingsPopup.SetActive(false); }
+
+    private void BringSettingsCanvasToFront()
+    {
+        Canvas canvas = GetComponent<Canvas>();
+        if (canvas == null)
+            canvas = GetComponentInParent<Canvas>();
+        if (canvas == null)
+            return;
+
+        canvas.overrideSorting = true;
+        if (canvas.sortingOrder < SettingsOverlaySortingOrder)
+            canvas.sortingOrder = SettingsOverlaySortingOrder;
+    }
 
     private void TogglePanel(bool lobby, bool gameplay, bool settings, bool pause)
     {

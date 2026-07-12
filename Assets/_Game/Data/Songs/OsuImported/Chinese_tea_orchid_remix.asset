@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c8f7d430bcc8bb4f986a97d225050e1, type: 3}
+  m_Name: Chinese_tea_orchid_remix
+  m_EditorClassIdentifier: 
+  _songTitle: "Yooh - \u4E0A\u6D77\u7D05\u8336\u9928 \uFF5E Chinese Tea Orchid Remix"
+  _sceneName: KhoaCuBu
+  _previewImage: {fileID: 21300000, guid: 82c082e244da2ec4da3ca42f17ca2ff1, type: 3}
+  _bpm: 188
+  _difficulty: Normal
+  songGroupId: "yooh\u4E0A\u6D77\u7D05\u8336\u9928_chinese_tea_orchid_remix"
+  difficultyLevel: 1
+  unlockType: 0
+  chartFileName: 
+  audioClip: {fileID: 8300000, guid: cd010211bd76e584fa30b38701a8fe7d, type: 3}
+  timelineAsset: {fileID: 0}
+  easyChartFileName: chart_yooh_shanghai_kouchakan_chinese_tea_orchid_remix_easy
+  normalChartFileName: chart_yooh_shanghai_kouchakan_chinese_tea_orchid_remix_medium
+  hardChartFileName: chart_yooh_shanghai_kouchakan_chinese_tea_orchid_remix_hard
+  easyTimelineAsset: {fileID: 11400000, guid: 02f511476a72d8a4ca0dff9ee19fd8e7, type: 2}
+  normalTimelineAsset: {fileID: 11400000, guid: f070f84e9fac0c7498ea14a7475ddb67, type: 2}
+  hardTimelineAsset: {fileID: 11400000, guid: 83c8789f9c60de943bd2f3a41b8e92ec, type: 2}

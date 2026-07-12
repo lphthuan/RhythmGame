@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c8f7d430bcc8bb4f986a97d225050e1, type: 3}
+  m_Name: hoyo_mix_feat_robin_vo_chevysway_to_my_beat_in_cosmos
+  m_EditorClassIdentifier: 
+  _songTitle: 'HOYO-MiX feat. Robin (VO: Chevy) - Sway to My Beat in Cosmos'
+  _sceneName: KhoaCuBu
+  _previewImage: {fileID: 21300000, guid: ad49d48f9564f354dbb9fec8a08cf9fa, type: 3}
+  _bpm: 100
+  _difficulty: Normal
+  songGroupId: hoyo_mix_feat_robin_vo_chevysway_to_my_beat_in_cosmos
+  difficultyLevel: 1
+  unlockType: 0
+  chartFileName: 
+  audioClip: {fileID: 8300000, guid: 52e304cb6a041b147af1cd0127766b0d, type: 3}
+  timelineAsset: {fileID: 0}
+  easyChartFileName: Sway to My Beat in Cosmos_easy
+  normalChartFileName: chart_audio_medium
+  hardChartFileName: chart_audio_hard
+  easyTimelineAsset: {fileID: 11400000, guid: 1978e655290b0344dba889146ed9af5c, type: 2}
+  normalTimelineAsset: {fileID: 11400000, guid: 7228cf1312e8bc549acadbbf8a183b19, type: 2}
+  hardTimelineAsset: {fileID: 11400000, guid: 765055edcea6d124ab208e8b12513fd3, type: 2}

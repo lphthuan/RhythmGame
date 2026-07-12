@@ -13,14 +13,20 @@ MonoBehaviour:
   m_Name: "uma_vs_\u30E2\u30EA\u30E2\u30EA\u3042\u3064\u3057_reend_of_a_dream_normal"
   m_EditorClassIdentifier: 
   _songTitle: "uma vs. \u30E2\u30EA\u30E2\u30EA\u3042\u3064\u3057 - Re\uFF1AEnd of
-    a Dream [Normal]"
+    a Dream"
   _sceneName: KhoaCuBu
   _previewImage: {fileID: -3406956895456133538, guid: 9f7e5239a512d334a9e1806aa95f407e, type: 3}
   _bpm: 212
   _difficulty: Normal
   songGroupId: "uma_vs_\u30E2\u30EA\u30E2\u30EA\u3042\u3064\u3057reend_of_a_dream"
-  difficultyLevel: 0
+  difficultyLevel: 1
   unlockType: 0
   chartFileName: chart_audio
-  audioClip: {fileID: 8300000, guid: 39eedad32b0b3e7428162b31a060d469, type: 3}
+  audioClip: {fileID: 8300000, guid: 04bef4010ca273344ac8f10913f4d503, type: 3}
   timelineAsset: {fileID: 0}
+  easyChartFileName: chart_audio_Easy
+  normalChartFileName: chart_audio_medium
+  hardChartFileName: ReEnd of a Dream (Critical_Star)_hard
+  easyTimelineAsset: {fileID: 11400000, guid: bb6c2e6383d860049aa61a4eec4d3e48, type: 2}
+  normalTimelineAsset: {fileID: 11400000, guid: 79f7e3e38a4c3c448b8ed8ea04a02cd5, type: 2}
+  hardTimelineAsset: {fileID: 11400000, guid: 8ca979e798207654aa60fb4c7c36035a, type: 2}

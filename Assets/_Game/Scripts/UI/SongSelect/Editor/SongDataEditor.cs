@@ -36,6 +36,12 @@ public class SongDataEditor : Editor
             EditorGUILayout.HelpBox("Gán Timeline Asset để mở và edit chart trực tiếp từ SongData này.", MessageType.Info);
 
         EditorGUILayout.Space(8f);
+        EditorGUILayout.LabelField("Difficulty Charts", EditorStyles.boldLabel);
+        DrawDifficultyChart("Easy", "easyChartFileName", "easyTimelineAsset");
+        DrawDifficultyChart("Normal", "normalChartFileName", "normalTimelineAsset");
+        DrawDifficultyChart("Hard", "hardChartFileName", "hardTimelineAsset");
+
+        EditorGUILayout.Space(8f);
         EditorGUILayout.LabelField("Save & Unlock", EditorStyles.boldLabel);
         EditorGUILayout.PropertyField(serializedObject.FindProperty("songGroupId"));
         EditorGUILayout.PropertyField(serializedObject.FindProperty("difficultyLevel"));
@@ -47,6 +53,23 @@ public class SongDataEditor : Editor
         EditorGUILayout.PropertyField(serializedObject.FindProperty("audioClip"));
 
         serializedObject.ApplyModifiedProperties();
+    }
+
+    private void DrawDifficultyChart(string label, string chartPropertyName, string timelinePropertyName)
+    {
+        SerializedProperty chartProperty = serializedObject.FindProperty(chartPropertyName);
+        SerializedProperty timelineProperty = serializedObject.FindProperty(timelinePropertyName);
+
+        EditorGUILayout.LabelField(label, EditorStyles.miniBoldLabel);
+        EditorGUI.indentLevel++;
+        EditorGUILayout.PropertyField(chartProperty, new GUIContent("Chart File Name"));
+        EditorGUILayout.PropertyField(timelineProperty, new GUIContent("Timeline Asset"));
+        using (new EditorGUI.DisabledScope(timelineProperty.objectReferenceValue == null))
+        {
+            if (GUILayout.Button("Open " + label + " Timeline"))
+                OpenTimeline((RhythmTimelineAsset)timelineProperty.objectReferenceValue, ((SongData)target).audioClip);
+        }
+        EditorGUI.indentLevel--;
     }
 
     private static void DrawCoverPreview(SongData song)

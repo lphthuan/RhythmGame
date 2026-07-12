@@ -12,14 +12,14 @@ using Keyboard = UnityEngine.InputSystem.Keyboard;
 using UnityEditor;
 #endif
 
+/// <summary>Builds the landscape song-selection screen from the SongData assets in the project.</summary>
 public class SongListManager : MonoBehaviour
 {
     public static SongListManager Instance;
 
-    public List<SongData> _songList;
+    public List<SongData> _songList = new();
     public SongItemUI _itemPrefab;
     public Transform _contentArea;
-
     public Image _centerPreviewImage;
     public TextMeshProUGUI _rightBpmText;
 
@@ -34,17 +34,12 @@ public class SongListManager : MonoBehaviour
     [SerializeField] private string projectSongDataFolder = "Assets/_Game/Data/Songs";
     [SerializeField] private bool playPreviewOnSelect = true;
     [SerializeField] private float previewStartSeconds = 0f;
-    [SerializeField] private float cardHeight = 92f;
-    [SerializeField] private float cardSpacing = 10f;
+    [SerializeField] private Sprite selectScreenBackground;
 
     private const string GeneratedRootName = "RG Generated Song Select";
-
-    private readonly Dictionary<SongData, Button> _songButtons = new();
-    private readonly Dictionary<SongData, Image> _songButtonImages = new();
-    private readonly Dictionary<SongData, TextMeshProUGUI> _songButtonTitles = new();
+    private readonly Dictionary<SongData, CarouselCard> _cards = new();
     private SongData _selectedSong;
     private AudioSource _previewAudioSource;
-    private RectTransform _generatedRoot;
     private Image _previewArt;
     private AspectRatioFitter _previewArtFitter;
     private TextMeshProUGUI _noArtText;
@@ -52,19 +47,37 @@ public class SongListManager : MonoBehaviour
     private TextMeshProUGUI _artistText;
     private TextMeshProUGUI _bpmText;
     private TextMeshProUGUI _difficultyText;
-    private TextMeshProUGUI _hintText;
+    private TextMeshProUGUI _lastScoreText;
+    private TextMeshProUGUI _bestScoreText;
+    private TextMeshProUGUI _rankText;
+    private ScrollRect _carouselScrollRect;
+    private RectTransform _carouselViewport;
+    private RectTransform _carouselContent;
+    private Difficulty _selectedDifficulty = Difficulty.Medium;
+    private readonly Dictionary<Difficulty, Image> _difficultyButtonImages = new();
+    private readonly Dictionary<Difficulty, TextMeshProUGUI> _difficultyButtonLabels = new();
 
-    private void Awake()
+    private sealed class CarouselCard
     {
-        Instance = this;
+        public RectTransform Rect;
+        public Image Background;
+        public Image Art;
+        public TextMeshProUGUI Difficulty;
+        public TextMeshProUGUI Title;
+        public TextMeshProUGUI Bpm;
+        public TextMeshProUGUI Rank;
+        public TextMeshProUGUI BestScore;
     }
+
+    private void Awake() => Instance = this;
 
     private void Start()
     {
         if (buildGeneratedLayout)
         {
             BuildGeneratedLayout();
-            SelectSong(GetFirstSong(), false);
+            _selectedDifficulty = LoadLastSelectedDifficulty();
+            SelectSong(GetInitialSong(), true);
         }
         else
         {
@@ -76,28 +89,25 @@ public class SongListManager : MonoBehaviour
     {
         if (WasConfirmPressedThisFrame())
             PlaySelectedSong();
+
+        if (WasPreviousPressedThisFrame())
+            SelectRelativeSong(-1);
+        else if (WasNextPressedThisFrame())
+            SelectRelativeSong(1);
     }
 
     public void PopulateList()
     {
         if (_itemPrefab == null || _contentArea == null)
-        {
-            Debug.LogWarning("SongListManager: Missing item prefab or content area.");
             return;
-        }
 
         for (int i = _contentArea.childCount - 1; i >= 0; i--)
-        {
             Destroy(_contentArea.GetChild(i).gameObject);
-        }
 
         foreach (SongData song in _songList)
         {
-            if (song == null)
-                continue;
-
-            SongItemUI item = Instantiate(_itemPrefab, _contentArea);
-            item.Setup(song);
+            if (song != null)
+                Instantiate(_itemPrefab, _contentArea).Setup(song);
         }
     }
 
@@ -107,30 +117,21 @@ public class SongListManager : MonoBehaviour
             return;
 
         if (_selectedSong == song)
-        {
             PlaySelectedSong();
-            return;
-        }
-
-        SelectSong(song, true);
+        else
+            SelectSong(song, true);
     }
 
     public void PlaySelectedSong()
     {
-        SongData selectedSong = SelectedSongManager.Instance != null
-            ? SelectedSongManager.Instance.SelectedSong
-            : _selectedSong;
-
-        if (selectedSong == null)
-        {
-            Debug.LogWarning("SongListManager: Select a song before pressing Play.");
+        SongData song = SelectedSongManager.Instance != null ? SelectedSongManager.Instance.SelectedSong : _selectedSong;
+        if (song == null)
             return;
-        }
 
         if (_previewAudioSource != null)
             _previewAudioSource.Stop();
 
-        LoadScene(gameplaySceneName);
+        SceneLoadUtility.LoadSceneByName(gameplaySceneName);
     }
 
     public void BackToMainMenu()
@@ -138,7 +139,19 @@ public class SongListManager : MonoBehaviour
         if (_previewAudioSource != null)
             _previewAudioSource.Stop();
 
-        LoadScene(mainMenuSceneName);
+        SceneLoadUtility.LoadSceneByName(mainMenuSceneName);
+    }
+
+    public void OpenSettings()
+    {
+        UIManager settingsManager = FindSettingsManager();
+        if (settingsManager == null)
+        {
+            Debug.LogWarning("SongListManager: CanvasThai/UIManager is missing from SongSelect.");
+            return;
+        }
+
+        settingsManager.OpenSettings();
     }
 
     private void BuildGeneratedLayout()
@@ -146,273 +159,505 @@ public class SongListManager : MonoBehaviour
         Canvas canvas = GetComponentInParent<Canvas>();
         if (canvas == null)
             canvas = FindFirstObjectByType<Canvas>();
-
         if (canvas == null)
         {
-            Debug.LogWarning("SongListManager: Cannot build generated layout because no Canvas was found.");
-            PopulateList();
+            Debug.LogWarning("SongListManager: no Canvas found.");
             return;
         }
 
         RemoveOldGeneratedRoot(canvas.transform);
         MergeProjectSongData();
+        ConsolidateSongListByGroupId();
         EnsureCanvasScaler(canvas);
         EnsureEventSystem();
         EnsurePreviewAudioSource();
+        _cards.Clear();
 
-        _generatedRoot = CreateRect(GeneratedRootName, canvas.transform);
-        Stretch(_generatedRoot);
-        _generatedRoot.SetAsLastSibling();
-        HideLegacyLayout(canvas);
+        RectTransform root = CreateRect(GeneratedRootName, canvas.transform);
+        Stretch(root);
+        root.SetAsLastSibling();
+        HideLegacyLayout(canvas, root);
 
-        Image bg = _generatedRoot.gameObject.AddComponent<Image>();
-        bg.color = new Color(0.045f, 0.035f, 0.075f, 0.98f);
+        Image background = root.gameObject.AddComponent<Image>();
+        background.sprite = selectScreenBackground;
+        background.type = Image.Type.Simple;
+        background.preserveAspect = false;
+        background.color = selectScreenBackground != null ? Color.white : new Color(0.10f, 0.08f, 0.16f, 1f);
 
-        RectTransform topBar = CreatePanel("Top Bar", _generatedRoot, new Color(0.96f, 0.93f, 0.98f, 0.96f));
-        Anchor(topBar, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -32f), new Vector2(0f, 64f));
+        RectTransform shade = CreatePanel("Background Shade", root, new Color(0.045f, 0.035f, 0.09f, 0.58f));
+        Stretch(shade);
+        shade.GetComponent<Image>().raycastTarget = false;
 
-        RectTransform backButton = CreatePanel("Back Button", topBar, new Color(0.42f, 0.12f, 0.36f, 0.95f));
-        Anchor(backButton, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(18f, 0f), new Vector2(112f, 42f));
-        Button back = backButton.gameObject.AddComponent<Button>();
-        back.targetGraphic = backButton.GetComponent<Image>();
-        back.onClick.AddListener(BackToMainMenu);
-        CreateText("Back", backButton, 18, FontStyles.Bold, TextAlignmentOptions.Center, Color.white, Vector2.zero, new Vector2(100f, 34f));
-
-        CreateText("Select a Song", topBar, 30, FontStyles.Normal, TextAlignmentOptions.Left, new Color(0.34f, 0.14f, 0.29f, 1f), new Vector2(146f, 0f), new Vector2(420f, 54f), new Vector2(0f, 0.5f), new Vector2(0f, 0.5f));
-        CreateText("RhythmGame", topBar, 22, FontStyles.Bold, TextAlignmentOptions.Center, new Color(0.38f, 0.34f, 0.42f, 1f), Vector2.zero, new Vector2(360f, 48f));
-        CreateText("Settings", topBar, 18, FontStyles.Bold, TextAlignmentOptions.Center, Color.white, new Vector2(-168f, 0f), new Vector2(150f, 40f), new Vector2(1f, 0.5f), new Vector2(1f, 0.5f));
-        CreateText("9999", topBar, 22, FontStyles.Bold, TextAlignmentOptions.Center, new Color(0.47f, 0.08f, 0.42f, 1f), new Vector2(-38f, 0f), new Vector2(100f, 40f), new Vector2(1f, 0.5f), new Vector2(1f, 0.5f));
-
-        RectTransform detailPanel = CreatePanel("Selected Song Detail", _generatedRoot, new Color(0.05f, 0.04f, 0.08f, 0.58f));
-        Anchor(detailPanel, new Vector2(0.03f, 0.07f), new Vector2(0.58f, 0.88f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
-
-        _titleText = CreateText(string.Empty, detailPanel, 43, FontStyles.Bold, TextAlignmentOptions.Left, Color.white, new Vector2(24f, -38f), new Vector2(520f, 66f), new Vector2(0f, 1f), new Vector2(0f, 1f));
-        _artistText = CreateText("Tap once to select. Tap selected song again to play.", detailPanel, 18, FontStyles.Normal, TextAlignmentOptions.Left, new Color(0.9f, 0.82f, 0.96f, 1f), new Vector2(26f, -92f), new Vector2(540f, 36f), new Vector2(0f, 1f), new Vector2(0f, 1f));
-        _bpmText = CreateText("BPM: --", detailPanel, 22, FontStyles.Bold, TextAlignmentOptions.Left, new Color(0.93f, 0.86f, 1f, 1f), new Vector2(28f, -132f), new Vector2(260f, 36f), new Vector2(0f, 1f), new Vector2(0f, 1f));
-        _difficultyText = CreateText("DIFFICULTY --", detailPanel, 19, FontStyles.Bold, TextAlignmentOptions.Left, new Color(1f, 0.82f, 0.35f, 1f), new Vector2(28f, -168f), new Vector2(320f, 34f), new Vector2(0f, 1f), new Vector2(0f, 1f));
-
-        RectTransform artFrame = CreatePanel("Song Art Frame", detailPanel, new Color(0.23f, 0.12f, 0.32f, 0.86f));
-        Anchor(artFrame, new Vector2(0.38f, 0.08f), new Vector2(0.96f, 0.76f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
-        Mask artMask = artFrame.gameObject.AddComponent<Mask>();
-        artMask.showMaskGraphic = true;
-        _previewArt = CreatePanel("Song Art", artFrame, new Color(0.52f, 0.35f, 0.68f, 0.94f)).GetComponent<Image>();
-        Stretch(_previewArt.rectTransform);
-        _previewArt.rectTransform.localEulerAngles = new Vector3(0f, 0f, -2.25f);
-        _previewArtFitter = _previewArt.gameObject.AddComponent<AspectRatioFitter>();
-        _previewArtFitter.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
-        _noArtText = CreateText("NO ART", artFrame, 38, FontStyles.Bold, TextAlignmentOptions.Center, new Color(1f, 1f, 1f, 0.4f), Vector2.zero, new Vector2(300f, 70f));
-
-        RectTransform scorePanel = CreatePanel("Score Placeholder", detailPanel, new Color(0.1f, 0.05f, 0.12f, 0.62f));
-        Anchor(scorePanel, new Vector2(0.02f, 0.08f), new Vector2(0.34f, 0.42f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
-        CreateText("LOCAL BEST", scorePanel, 18, FontStyles.Bold, TextAlignmentOptions.Center, new Color(0.95f, 0.84f, 1f, 1f), new Vector2(0f, 54f), new Vector2(240f, 34f));
-        CreateText("--'---'---", scorePanel, 28, FontStyles.Normal, TextAlignmentOptions.Center, Color.white, Vector2.zero, new Vector2(260f, 46f));
-        CreateText("Rank -", scorePanel, 18, FontStyles.Normal, TextAlignmentOptions.Center, new Color(1f, 0.78f, 0.96f, 1f), new Vector2(0f, -50f), new Vector2(240f, 34f));
-
-        RectTransform listPanel = CreatePanel("Song Card List", _generatedRoot, new Color(0f, 0f, 0f, 0f));
-        Anchor(listPanel, new Vector2(0.62f, 0.07f), new Vector2(0.985f, 0.88f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
-        BuildScrollList(listPanel);
-
-        _hintText = CreateText("Enter = play selected", _generatedRoot, 18, FontStyles.Normal, TextAlignmentOptions.Right, new Color(1f, 1f, 1f, 0.72f), new Vector2(-26f, 18f), new Vector2(420f, 36f), new Vector2(1f, 0f), new Vector2(1f, 0f));
+        BuildTopBar(root);
+        BuildSongDetail(root);
+        BuildCarousel(root);
+        CreateText("Tap a card to select. Tap the selected card again to play.", root, 14, FontStyles.Normal,
+            TextAlignmentOptions.Right, new Color(1f, 1f, 1f, 0.80f), new Vector2(-28f, 18f), new Vector2(560f, 28f), Vector2.one, Vector2.one);
     }
 
-    private void BuildScrollList(RectTransform parent)
+    private void BuildTopBar(RectTransform root)
     {
-        ScrollRect scrollRect = parent.gameObject.AddComponent<ScrollRect>();
-        scrollRect.horizontal = false;
-        scrollRect.vertical = true;
-        scrollRect.movementType = ScrollRect.MovementType.Elastic;
-        scrollRect.scrollSensitivity = 38f;
+        RectTransform bar = CreatePanel("Top Bar", root, new Color(0.96f, 0.94f, 0.99f, 0.93f));
+        Anchor(bar, Vector2.up, Vector2.one, new Vector2(0.5f, 1f), new Vector2(0f, -31f), new Vector2(0f, 62f));
 
-        RectTransform viewport = CreateRect("Viewport", parent);
-        Stretch(viewport);
-        Image viewportImage = viewport.gameObject.AddComponent<Image>();
-        viewportImage.color = new Color(1f, 1f, 1f, 0.01f);
-        Mask mask = viewport.gameObject.AddComponent<Mask>();
+        RectTransform back = CreateButton("Back", bar, "Back", new Color(0.31f, 0.16f, 0.38f, 0.96f));
+        Anchor(back, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(22f, 0f), new Vector2(100f, 36f));
+        back.GetComponent<Button>().onClick.AddListener(BackToMainMenu);
+
+        CreateText("Select a Song", bar, 25, FontStyles.Normal, TextAlignmentOptions.Left, new Color(0.20f, 0.10f, 0.27f, 1f),
+            new Vector2(144f, 0f), new Vector2(260f, 44f), new Vector2(0f, 0.5f), new Vector2(0f, 0.5f));
+        CreateText("RHYTHM GAME", bar, 20, FontStyles.Bold, TextAlignmentOptions.Center, new Color(0.22f, 0.16f, 0.31f, 1f),
+            Vector2.zero, new Vector2(280f, 44f));
+
+        RectTransform settings = CreateButton("Settings", bar, "\u2699", new Color(0.34f, 0.17f, 0.48f, 0.96f), 27);
+        Anchor(settings, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-290f, 0f), new Vector2(48f, 42f));
+        settings.GetComponent<Button>().onClick.AddListener(OpenSettings);
+
+        BuildCurrencyBadge(bar, "Money", "0", new Vector2(-183f, 0f), new Color(0.08f, 0.38f, 0.49f, 0.96f));
+        BuildCurrencyBadge(bar, "Diamond", "0", new Vector2(-72f, 0f), new Color(0.43f, 0.21f, 0.66f, 0.96f));
+    }
+
+    private static void BuildCurrencyBadge(RectTransform parent, string title, string value, Vector2 position, Color color)
+    {
+        RectTransform badge = CreatePanel(title + " Badge", parent, color);
+        Anchor(badge, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), position, new Vector2(96f, 42f));
+        CreateText(value, badge, 20, FontStyles.Bold, TextAlignmentOptions.Center, Color.white, new Vector2(0f, 7f), new Vector2(88f, 24f));
+        CreateText(title, badge, 10, FontStyles.Normal, TextAlignmentOptions.Center, new Color(1f, 1f, 1f, 0.82f), new Vector2(0f, -11f), new Vector2(88f, 18f));
+    }
+
+    private void BuildSongDetail(RectTransform root)
+    {
+        RectTransform detail = CreatePanel("Selected Song Detail", root, new Color(0.04f, 0.035f, 0.10f, 0.80f));
+        Anchor(detail, new Vector2(0.03f, 0.10f), new Vector2(0.57f, 0.87f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+
+        RectTransform difficultyGroup = CreateRect("Difficulty Buttons", detail);
+        Anchor(difficultyGroup, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(22f, -25f), new Vector2(330f, 36f));
+        CreateDifficultyButton(difficultyGroup, Difficulty.Easy, "EASY", 0f);
+        CreateDifficultyButton(difficultyGroup, Difficulty.Medium, "NORMAL", 112f);
+        CreateDifficultyButton(difficultyGroup, Difficulty.Hard, "HARD", 224f);
+
+        _titleText = CreateText("", detail, 36, FontStyles.Bold, TextAlignmentOptions.Left, Color.white, new Vector2(22f, -74f), new Vector2(355f, 50f), new Vector2(0f, 1f), new Vector2(0f, 1f));
+        _artistText = CreateText("", detail, 17, FontStyles.Normal, TextAlignmentOptions.Left, new Color(0.88f, 0.80f, 0.96f, 1f), new Vector2(24f, -120f), new Vector2(340f, 28f), new Vector2(0f, 1f), new Vector2(0f, 1f));
+        _bpmText = CreateText("BPM: --", detail, 19, FontStyles.Bold, TextAlignmentOptions.Left, new Color(1f, 0.81f, 0.32f, 1f), new Vector2(24f, -155f), new Vector2(260f, 30f), new Vector2(0f, 1f), new Vector2(0f, 1f));
+
+        RectTransform artFrame = CreatePanel("Song Art Frame", detail, new Color(0.48f, 0.25f, 0.62f, 0.94f));
+        Anchor(artFrame, new Vector2(0.43f, 0.09f), new Vector2(0.96f, 0.76f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+        artFrame.gameObject.AddComponent<Mask>().showMaskGraphic = true;
+        _previewArt = CreatePanel("Song Art", artFrame, new Color(0.38f, 0.19f, 0.56f, 1f)).GetComponent<Image>();
+        Stretch(_previewArt.rectTransform);
+        _previewArt.rectTransform.localEulerAngles = new Vector3(0f, 0f, -2f);
+        _previewArtFitter = _previewArt.gameObject.AddComponent<AspectRatioFitter>();
+        _previewArtFitter.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
+        _noArtText = CreateText("NO ART", artFrame, 31, FontStyles.Bold, TextAlignmentOptions.Center, new Color(1f, 1f, 1f, 0.48f), Vector2.zero, new Vector2(260f, 55f));
+
+        RectTransform score = CreatePanel("Score Panel", detail, new Color(0.10f, 0.05f, 0.16f, 0.78f));
+        Anchor(score, new Vector2(0.035f, 0.07f), new Vector2(0.40f, 0.43f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+        CreateText("LAST SCORE", score, 13, FontStyles.Bold, TextAlignmentOptions.Center, new Color(0.86f, 0.75f, 1f, 1f), new Vector2(0f, 46f), new Vector2(210f, 22f));
+        _lastScoreText = CreateText("0000000", score, 24, FontStyles.Bold, TextAlignmentOptions.Center, Color.white, new Vector2(0f, 20f), new Vector2(220f, 30f));
+        CreateText("BEST SCORE", score, 13, FontStyles.Bold, TextAlignmentOptions.Center, new Color(0.86f, 0.75f, 1f, 1f), new Vector2(-35f, -17f), new Vector2(160f, 22f));
+        _bestScoreText = CreateText("0000000", score, 19, FontStyles.Bold, TextAlignmentOptions.Center, Color.white, new Vector2(-25f, -39f), new Vector2(165f, 28f));
+        _rankText = CreateText("-", score, 32, FontStyles.Bold, TextAlignmentOptions.Center, new Color(1f, 0.55f, 0.25f, 1f), new Vector2(77f, -28f), new Vector2(56f, 54f));
+    }
+
+    private void CreateDifficultyButton(RectTransform parent, Difficulty difficulty, string label, float x)
+    {
+        RectTransform rect = CreateButton(label + " Difficulty", parent, label, DifficultyColor(difficulty), 15f);
+        Anchor(rect, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(x, 0f), new Vector2(104f, 34f));
+
+        Button button = rect.GetComponent<Button>();
+        button.onClick.AddListener(() => SelectDifficulty(difficulty));
+
+        _difficultyButtonImages[difficulty] = rect.GetComponent<Image>();
+        _difficultyButtonLabels[difficulty] = rect.GetComponentInChildren<TextMeshProUGUI>(true);
+        if (difficulty == Difficulty.Medium)
+            _difficultyText = _difficultyButtonLabels[difficulty];
+    }
+
+    private void BuildCarousel(RectTransform root)
+    {
+        RectTransform carousel = CreateRect("Song Carousel", root);
+        Anchor(carousel, new Vector2(0.60f, 0.12f), new Vector2(0.985f, 0.84f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+        _carouselScrollRect = carousel.gameObject.AddComponent<ScrollRect>();
+        _carouselScrollRect.horizontal = false;
+        _carouselScrollRect.vertical = true;
+        _carouselScrollRect.movementType = ScrollRect.MovementType.Elastic;
+        _carouselScrollRect.scrollSensitivity = 28f;
+        _carouselScrollRect.decelerationRate = 0.08f;
+
+        _carouselViewport = CreatePanel("Viewport", carousel, new Color(1f, 1f, 1f, 0.01f));
+        Stretch(_carouselViewport);
+        Mask mask = _carouselViewport.gameObject.AddComponent<Mask>();
         mask.showMaskGraphic = false;
+        SongSwipeSelector swipeSelector = _carouselViewport.gameObject.AddComponent<SongSwipeSelector>();
+        swipeSelector.Configure(this);
 
-        RectTransform content = CreateRect("Content", viewport);
-        Anchor(content, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f), Vector2.zero, new Vector2(0f, 0f));
+        _carouselContent = CreateRect("Content", _carouselViewport);
+        _carouselContent.anchorMin = new Vector2(0f, 1f);
+        _carouselContent.anchorMax = new Vector2(1f, 1f);
+        _carouselContent.pivot = new Vector2(0.5f, 1f);
+        _carouselContent.anchoredPosition = Vector2.zero;
+        _carouselContent.sizeDelta = new Vector2(0f, Mathf.Max(520f, _songList.Count * 108f + 72f));
+        _carouselScrollRect.viewport = _carouselViewport;
+        _carouselScrollRect.content = _carouselContent;
+        _carouselScrollRect.onValueChanged.AddListener(_ => UpdateCarousel());
 
-        VerticalLayoutGroup layout = content.gameObject.AddComponent<VerticalLayoutGroup>();
-        layout.padding = new RectOffset(12, 18, 8, 10);
-        layout.spacing = cardSpacing;
-        layout.childAlignment = TextAnchor.UpperRight;
-        layout.childControlWidth = true;
-        layout.childControlHeight = false;
-        layout.childForceExpandWidth = true;
-        layout.childForceExpandHeight = false;
-
-        ContentSizeFitter fitter = content.gameObject.AddComponent<ContentSizeFitter>();
-        fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-
-        scrollRect.viewport = viewport;
-        scrollRect.content = content;
-
+        int songIndex = 0;
         foreach (SongData song in _songList)
         {
-            if (song == null)
-                continue;
-
-            CreateSongCard(song, content);
+            if (song != null)
+            {
+                CreateSongCard(song, _carouselContent);
+                CarouselCard card = _cards[song];
+                card.Rect.anchorMin = card.Rect.anchorMax = new Vector2(0.5f, 1f);
+                card.Rect.pivot = new Vector2(0.5f, 0.5f);
+                card.Rect.anchoredPosition = new Vector2(14f, -56f - songIndex * 108f);
+                songIndex++;
+            }
         }
     }
 
     private void CreateSongCard(SongData song, RectTransform parent)
     {
-        RectTransform card = CreatePanel("Song Card - " + song.SongTitle, parent, new Color(0.18f, 0.04f, 0.18f, 0.82f));
-        LayoutElement layoutElement = card.gameObject.AddComponent<LayoutElement>();
-        layoutElement.preferredHeight = cardHeight;
-        layoutElement.minHeight = cardHeight;
-
-        Image cardImage = card.GetComponent<Image>();
+        RectTransform card = CreatePanel("Song Card - " + song.SongTitle, parent, new Color(0.11f, 0.03f, 0.16f, 0.92f));
+        card.sizeDelta = new Vector2(410f, 82f);
+        Image background = card.GetComponent<Image>();
         Button button = card.gameObject.AddComponent<Button>();
-        button.targetGraphic = cardImage;
+        button.targetGraphic = background;
         button.onClick.AddListener(() => SelectOrPlaySong(song));
 
-        RectTransform levelBlock = CreatePanel("Difficulty Block", card, new Color(0.78f, 0.08f, 0.48f, 0.96f));
-        Anchor(levelBlock, new Vector2(0f, 0f), new Vector2(0.2f, 1f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
-        CreateText(GetDifficultyLabel(song), levelBlock, 25, FontStyles.Bold, TextAlignmentOptions.Center, Color.white, Vector2.zero, new Vector2(110f, 46f));
+        RectTransform artMask = CreatePanel("Card Art", card, Color.white);
+        Anchor(artMask, new Vector2(0.18f, 0f), new Vector2(0.68f, 1f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+        artMask.gameObject.AddComponent<Mask>().showMaskGraphic = true;
+        Image art = CreatePanel("Art", artMask, new Color(1f, 1f, 1f, 0.32f)).GetComponent<Image>();
+        Stretch(art.rectTransform);
+        art.sprite = song.PreviewImage;
+        art.preserveAspect = false;
+        art.raycastTarget = false;
 
-        RectTransform titleBlock = CreateRect("Title Block", card);
-        Anchor(titleBlock, new Vector2(0.23f, 0f), new Vector2(0.78f, 1f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
-        CreateText(song.SongTitle, titleBlock, 21, FontStyles.Bold, TextAlignmentOptions.Left, Color.white, new Vector2(0f, 14f), new Vector2(320f, 34f), new Vector2(0f, 0.5f), new Vector2(0f, 0.5f));
-        CreateText(GetBpmLabel(song), titleBlock, 14, FontStyles.Normal, TextAlignmentOptions.Left, new Color(0.9f, 0.78f, 0.94f, 1f), new Vector2(0f, -18f), new Vector2(260f, 26f), new Vector2(0f, 0.5f), new Vector2(0f, 0.5f));
-
-        RectTransform rankBlock = CreatePanel("Rank Block", card, new Color(1f, 1f, 1f, 0.82f));
-        Anchor(rankBlock, new Vector2(0.8f, 0f), new Vector2(1f, 1f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
-        CreateText("A", rankBlock, 32, FontStyles.Bold, TextAlignmentOptions.Center, new Color(0.52f, 0.14f, 0.5f, 1f), Vector2.zero, new Vector2(110f, 54f));
-
-        _songButtons[song] = button;
-        _songButtonImages[song] = cardImage;
-        _songButtonTitles[song] = titleBlock.GetComponentInChildren<TextMeshProUGUI>();
+        RectTransform difficulty = CreatePanel("Difficulty", card, DifficultyColor(song));
+        Anchor(difficulty, new Vector2(0f, 0f), new Vector2(0.22f, 1f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+        TextMeshProUGUI difficultyText = CreateText(GetDifficultyLabel(song), difficulty, 16, FontStyles.Bold, TextAlignmentOptions.Center, Color.white, Vector2.zero, new Vector2(86f, 34f));
+        RectTransform textArea = CreateRect("Text", card);
+        Anchor(textArea, new Vector2(0.24f, 0f), new Vector2(0.82f, 1f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+        TextMeshProUGUI title = CreateText(song.SongTitle, textArea, 17, FontStyles.Bold, TextAlignmentOptions.Left, Color.white, new Vector2(4f, 15f), new Vector2(230f, 26f), new Vector2(0f, 0.5f), new Vector2(0f, 0.5f));
+        TextMeshProUGUI bpm = CreateText(GetBpmLabel(song), textArea, 12, FontStyles.Normal, TextAlignmentOptions.Left, new Color(0.97f, 0.86f, 1f, 1f), new Vector2(4f, -16f), new Vector2(210f, 22f), new Vector2(0f, 0.5f), new Vector2(0f, 0.5f));
+        TextMeshProUGUI rank = CreateText("-", card, 26, FontStyles.Bold, TextAlignmentOptions.Center, new Color(1f, 0.55f, 0.82f, 1f), new Vector2(-24f, 11f), new Vector2(58f, 32f), Vector2.right, Vector2.right);
+        TextMeshProUGUI bestScore = CreateText("0000000", card, 13, FontStyles.Bold, TextAlignmentOptions.Center, new Color(1f, 1f, 1f, 0.86f), new Vector2(-24f, -18f), new Vector2(86f, 22f), Vector2.right, Vector2.right);
+        _cards[song] = new CarouselCard { Rect = card, Background = background, Art = art, Difficulty = difficultyText, Title = title, Bpm = bpm, Rank = rank, BestScore = bestScore };
     }
 
     private void SelectSong(SongData song, bool playPreview)
     {
+        if (song == null)
+            return;
+
         _selectedSong = song;
-
         if (SelectedSongManager.Instance != null)
-            SelectedSongManager.Instance.SetSelectedSong(song);
+            SelectedSongManager.Instance.SetSelectedSong(song, _selectedDifficulty);
 
-        ShowSongDetails(song, true);
-        UpdateCardSelection();
-
+        ShowSongDetails(song);
+        CenterSelectedCard();
+        UpdateCarousel();
         if (playPreview && playPreviewOnSelect)
             PlayPreview(song);
     }
 
-    private void ShowSongDetails(SongData song, bool selected)
+    private void SelectDifficulty(Difficulty difficulty)
     {
-        if (song == null)
+        _selectedDifficulty = difficulty;
+        if (_selectedSong != null && SelectedSongManager.Instance != null)
+            SelectedSongManager.Instance.SetSelectedSong(_selectedSong, _selectedDifficulty);
+
+        if (_selectedSong != null)
+            ShowSongDetails(_selectedSong);
+
+        UpdateDifficultyButtons();
+    }
+
+    private void SelectRelativeSong(int direction)
+    {
+        if (_songList.Count == 0)
             return;
+        int index = _songList.IndexOf(_selectedSong);
+        if (index < 0) index = 0;
+        index = (index + direction + _songList.Count) % _songList.Count;
+        SelectSong(_songList[index], true);
+    }
 
-        if (_titleText != null)
-            _titleText.text = song.SongTitle;
-
-        if (_artistText != null)
-            _artistText.text = selected
-                ? "Tap this song again to start."
-                : "Tap once to select. Tap selected song again to play.";
-
-        if (_bpmText != null)
-            _bpmText.text = GetBpmLabel(song);
-
-        if (_difficultyText != null)
-            _difficultyText.text = "DIFFICULTY " + GetDifficultyLabel(song);
-
-        if (_previewArt != null)
+    private void ShowSongDetails(SongData song)
+    {
+        _titleText.text = song.SongTitle;
+        _artistText.text = "Tap selected song again to start.";
+        _bpmText.text = GetBpmLabel(song);
+        _previewArt.sprite = song.PreviewImage;
+        _previewArt.color = song.PreviewImage != null ? Color.white : new Color(0.38f, 0.19f, 0.56f, 1f);
+        _noArtText.gameObject.SetActive(song.PreviewImage == null);
+        if (song.PreviewImage != null)
         {
-            _previewArt.sprite = song.PreviewImage;
-            _previewArt.color = song.PreviewImage != null
-                ? Color.white
-                : new Color(0.52f, 0.35f, 0.68f, 0.94f);
-            _previewArt.preserveAspect = false;
-
-            if (_previewArtFitter != null && song.PreviewImage != null)
-            {
-                Rect sourceRect = song.PreviewImage.rect;
-                _previewArtFitter.aspectRatio = sourceRect.height > 0f
-                    ? sourceRect.width / sourceRect.height
-                    : 1f;
-            }
+            Rect rect = song.PreviewImage.rect;
+            _previewArtFitter.aspectRatio = rect.height > 0f ? rect.width / rect.height : 1f;
         }
 
-        if (_noArtText != null)
+        SongPlayStats stats = SongPlayStats.Load(song, _selectedDifficulty);
+        _lastScoreText.text = stats.LastScore.ToString("D7");
+        _bestScoreText.text = stats.BestScore.ToString("D7");
+        _rankText.text = string.IsNullOrEmpty(stats.BestRank) ? "-" : stats.BestRank;
+        UpdateDifficultyButtons();
+    }
+
+    private void UpdateDifficultyButtons()
+    {
+        foreach (KeyValuePair<Difficulty, Image> item in _difficultyButtonImages)
         {
-            _noArtText.gameObject.SetActive(song.PreviewImage == null);
+            bool selected = item.Key == _selectedDifficulty;
+            item.Value.color = selected ? DifficultyColor(item.Key) : new Color(0.12f, 0.08f, 0.18f, 0.86f);
+            RectTransform rect = item.Value.rectTransform;
+            rect.localScale = selected ? Vector3.one * 1.08f : Vector3.one;
+        }
+
+        foreach (KeyValuePair<Difficulty, TextMeshProUGUI> item in _difficultyButtonLabels)
+        {
+            bool selected = item.Key == _selectedDifficulty;
+            item.Value.color = selected ? Color.white : new Color(1f, 1f, 1f, 0.68f);
         }
     }
 
-    private void UpdateCardSelection()
+    public void SelectClosestScrolledSong()
     {
-        foreach (KeyValuePair<SongData, Image> pair in _songButtonImages)
+        if (_carouselViewport == null || _cards.Count == 0)
+            return;
+
+        SongData closestSong = null;
+        float closestDistance = float.MaxValue;
+        foreach (KeyValuePair<SongData, CarouselCard> item in _cards)
         {
-            bool selected = pair.Key == _selectedSong;
-            pair.Value.color = selected
-                ? new Color(0.82f, 0.12f, 0.54f, 0.96f)
-                : new Color(0.18f, 0.04f, 0.18f, 0.82f);
+            float distance = Mathf.Abs(_carouselViewport.InverseTransformPoint(item.Value.Rect.position).y);
+            if (distance < closestDistance)
+            {
+                closestDistance = distance;
+                closestSong = item.Key;
+            }
         }
+
+        if (closestSong != null && closestSong != _selectedSong)
+            SelectSong(closestSong, true);
+        else
+            CenterSelectedCard();
+    }
+
+    private void UpdateCarousel()
+    {
+        if (_carouselViewport == null)
+            return;
+
+        foreach (KeyValuePair<SongData, CarouselCard> item in _cards)
+        {
+            float localY = _carouselViewport.InverseTransformPoint(item.Value.Rect.position).y;
+            float t = Mathf.Clamp01(1f - Mathf.Abs(localY) / 220f);
+            float scale = Mathf.Lerp(0.74f, 1.12f, t);
+            item.Value.Rect.localScale = Vector3.one * scale;
+            item.Value.Rect.anchoredPosition = new Vector2(Mathf.Lerp(38f, -14f, t), item.Value.Rect.anchoredPosition.y);
+            item.Value.Background.color = item.Key == _selectedSong
+                ? new Color(0.60f, 0.08f, 0.44f, 0.98f)
+                : new Color(0.11f, 0.03f, 0.16f, 0.92f);
+            Difficulty displayDifficulty = item.Key == _selectedSong ? _selectedDifficulty : GetPreferredDifficulty(item.Key);
+            SongPlayStats stats = SongPlayStats.Load(item.Key, displayDifficulty);
+            item.Value.Difficulty.text = GetDifficultyLabel(displayDifficulty).ToUpperInvariant();
+            item.Value.Difficulty.transform.parent.GetComponent<Image>().color = DifficultyColor(displayDifficulty);
+            item.Value.Rank.text = string.IsNullOrEmpty(stats.BestRank) ? "-" : stats.BestRank;
+            item.Value.BestScore.text = stats.BestScore.ToString("D7");
+        }
+    }
+
+    private void CenterSelectedCard()
+    {
+        if (_selectedSong == null || _carouselContent == null || _carouselViewport == null || !_cards.TryGetValue(_selectedSong, out CarouselCard card))
+            return;
+
+        Canvas.ForceUpdateCanvases();
+        float desiredY = -card.Rect.anchoredPosition.y - _carouselViewport.rect.height * 0.5f;
+        float maxY = Mathf.Max(0f, _carouselContent.rect.height - _carouselViewport.rect.height);
+        Vector2 position = _carouselContent.anchoredPosition;
+        position.y = Mathf.Clamp(desiredY, 0f, maxY);
+        _carouselContent.anchoredPosition = position;
     }
 
     private void PlayPreview(SongData song)
     {
         if (_previewAudioSource == null || song == null || song.audioClip == null)
             return;
-
         _previewAudioSource.Stop();
         _previewAudioSource.clip = song.audioClip;
-        _previewAudioSource.volume = RuntimeGameplaySettings.MusicVolume01;
         _previewAudioSource.loop = true;
+        _previewAudioSource.volume = RuntimeGameplaySettings.MusicVolume01;
         _previewAudioSource.time = Mathf.Clamp(previewStartSeconds, 0f, Mathf.Max(0f, song.audioClip.length - 0.05f));
         _previewAudioSource.Play();
     }
 
+    private static UIManager FindSettingsManager()
+    {
+        UIManager[] managers = FindObjectsByType<UIManager>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        foreach (UIManager manager in managers)
+        {
+            if (manager != null && manager.gameObject.name == "CanvasThai")
+                return manager;
+        }
+
+        return null;
+    }
+
+    private GameObject BuildSettingsOverlay()
+    {
+        RectTransform root = CreatePanel("Settings Overlay", transform.root, new Color(0f, 0f, 0f, 0.72f));
+        Stretch(root);
+        RectTransform panel = CreatePanel("Settings Panel", root, new Color(0.12f, 0.07f, 0.19f, 0.98f));
+        Anchor(panel, new Vector2(0.25f, 0.16f), new Vector2(0.75f, 0.84f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+        CreateText("SETTINGS", panel, 30, FontStyles.Bold, TextAlignmentOptions.Center, Color.white, new Vector2(0f, -44f), new Vector2(400f, 42f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f));
+        CreateText("AUDIO", panel, 18, FontStyles.Bold, TextAlignmentOptions.Left, new Color(0.92f, 0.68f, 1f, 1f), new Vector2(44f, 56f), new Vector2(160f, 30f));
+        CreateSettingRow(panel, "Music Volume", 24f, () => RuntimeGameplaySettings.MusicVolumePercent.ToString() + "%", value => RuntimeGameplaySettings.MusicVolumePercent = Mathf.Clamp(RuntimeGameplaySettings.MusicVolumePercent + value * 5, 0, 100));
+        CreateSettingRow(panel, "Offset", -34f, () => RuntimeGameplaySettings.AudioOffsetMs + " ms", value => RuntimeGameplaySettings.AudioOffsetMs = Mathf.Clamp(RuntimeGameplaySettings.AudioOffsetMs + value * 5, -500, 1000));
+        CreateText("GAMEPLAY", panel, 18, FontStyles.Bold, TextAlignmentOptions.Left, new Color(0.92f, 0.68f, 1f, 1f), new Vector2(44f, -108f), new Vector2(160f, 30f));
+        CreateSettingRow(panel, "Note Speed", -166f, () => RuntimeGameplaySettings.NoteSpeedMultiplier.ToString("0.0"), value => RuntimeGameplaySettings.NoteSpeedMultiplier = Mathf.Clamp(RuntimeGameplaySettings.NoteSpeedMultiplier + value * 0.1f, RuntimeGameplaySettings.MinNoteSpeedSetting, RuntimeGameplaySettings.MaxNoteSpeedSetting));
+        RectTransform close = CreateButton("Close", panel, "Done", new Color(0.40f, 0.17f, 0.53f, 1f));
+        Anchor(close, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 42f), new Vector2(130f, 40f));
+        close.GetComponent<Button>().onClick.AddListener(() => { RuntimeGameplaySettings.Save(); root.gameObject.SetActive(false); });
+        return root.gameObject;
+    }
+
+    private static void CreateSettingRow(RectTransform parent, string label, float y, System.Func<string> read, System.Action<int> change)
+    {
+        CreateText(label, parent, 20, FontStyles.Normal, TextAlignmentOptions.Left, Color.white, new Vector2(44f, y), new Vector2(260f, 34f));
+        TextMeshProUGUI valueText = CreateText(read(), parent, 21, FontStyles.Bold, TextAlignmentOptions.Center, Color.white, new Vector2(0f, y), new Vector2(150f, 34f));
+        RectTransform minus = CreateButton("Minus " + label, parent, "-", new Color(0.30f, 0.14f, 0.43f, 1f));
+        Anchor(minus, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-160f, y), new Vector2(38f, 34f));
+        minus.GetComponent<Button>().onClick.AddListener(() => { change(-1); valueText.text = read(); });
+        RectTransform plus = CreateButton("Plus " + label, parent, "+", new Color(0.30f, 0.14f, 0.43f, 1f));
+        Anchor(plus, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-44f, y), new Vector2(38f, 34f));
+        plus.GetComponent<Button>().onClick.AddListener(() => { change(1); valueText.text = read(); });
+    }
+
     private void MergeProjectSongData()
     {
-        if (!includeProjectSongData)
-            return;
-
 #if UNITY_EDITOR
-        if (string.IsNullOrWhiteSpace(projectSongDataFolder))
-            return;
-
-        HashSet<SongData> existingSongs = new(_songList);
-        string[] guids = AssetDatabase.FindAssets("t:SongData", new[] { projectSongDataFolder });
-        for (int i = 0; i < guids.Length; i++)
+        if (!includeProjectSongData || string.IsNullOrWhiteSpace(projectSongDataFolder)) return;
+        HashSet<SongData> existing = new(_songList);
+        foreach (string guid in AssetDatabase.FindAssets("t:SongData", new[] { projectSongDataFolder }))
         {
-            string path = AssetDatabase.GUIDToAssetPath(guids[i]);
-            SongData song = AssetDatabase.LoadAssetAtPath<SongData>(path);
-            if (song == null || existingSongs.Contains(song))
-                continue;
-
-            _songList.Add(song);
-            existingSongs.Add(song);
+            SongData song = AssetDatabase.LoadAssetAtPath<SongData>(AssetDatabase.GUIDToAssetPath(guid));
+            if (song != null && existing.Add(song)) _songList.Add(song);
         }
 #endif
     }
 
-    private void HideLegacyLayout(Canvas canvas)
+    private void ConsolidateSongListByGroupId()
     {
-        if (!hideLegacyLayout || canvas == null)
-            return;
+        Dictionary<string, SongData> hubs = new();
+        List<SongData> consolidated = new();
 
-        if (transform == canvas.transform)
+        foreach (SongData song in _songList)
         {
-            return;
+            if (song == null)
+                continue;
+
+            string key = GetSongGroupKey(song);
+            if (!hubs.TryGetValue(key, out SongData hub))
+            {
+                hubs[key] = song;
+                consolidated.Add(song);
+                CopyLegacyDifficultyIntoSlot(song, song);
+                continue;
+            }
+
+            MergeSongIntoHub(hub, song);
         }
 
+        _songList.Clear();
+        _songList.AddRange(consolidated);
+    }
+
+    private static void MergeSongIntoHub(SongData hub, SongData source)
+    {
+        if (hub == null || source == null)
+            return;
+
+        if (hub.PreviewImage == null && source.PreviewImage != null)
+            hub._previewImage = source.PreviewImage;
+        if (hub.audioClip == null && source.audioClip != null)
+            hub.audioClip = source.audioClip;
+        if (hub._bpm <= 0f && source._bpm > 0f)
+            hub._bpm = source._bpm;
+
+        CopyLegacyDifficultyIntoSlot(hub, source);
+        CopyDifficultySlots(hub, source);
+    }
+
+    private static void CopyLegacyDifficultyIntoSlot(SongData hub, SongData source)
+    {
+        string chart = source.ComputedChartFileName;
+        if (string.IsNullOrWhiteSpace(chart))
+            return;
+
+        switch (source.difficultyLevel)
+        {
+            case Difficulty.Easy:
+                if (string.IsNullOrWhiteSpace(hub.easyChartFileName)) hub.easyChartFileName = chart;
+                if (hub.easyTimelineAsset == null) hub.easyTimelineAsset = source.GetTimelineAsset(Difficulty.Easy);
+                break;
+            case Difficulty.Hard:
+                if (string.IsNullOrWhiteSpace(hub.hardChartFileName)) hub.hardChartFileName = chart;
+                if (hub.hardTimelineAsset == null) hub.hardTimelineAsset = source.GetTimelineAsset(Difficulty.Hard);
+                break;
+            default:
+                if (string.IsNullOrWhiteSpace(hub.normalChartFileName)) hub.normalChartFileName = chart;
+                if (hub.normalTimelineAsset == null) hub.normalTimelineAsset = source.GetTimelineAsset(Difficulty.Medium);
+                break;
+        }
+    }
+
+    private static void CopyDifficultySlots(SongData hub, SongData source)
+    {
+        if (string.IsNullOrWhiteSpace(hub.easyChartFileName)) hub.easyChartFileName = source.easyChartFileName;
+        if (string.IsNullOrWhiteSpace(hub.normalChartFileName)) hub.normalChartFileName = source.normalChartFileName;
+        if (string.IsNullOrWhiteSpace(hub.hardChartFileName)) hub.hardChartFileName = source.hardChartFileName;
+
+        if (hub.easyTimelineAsset == null) hub.easyTimelineAsset = source.easyTimelineAsset;
+        if (hub.normalTimelineAsset == null) hub.normalTimelineAsset = source.normalTimelineAsset;
+        if (hub.hardTimelineAsset == null) hub.hardTimelineAsset = source.hardTimelineAsset;
+    }
+
+    private static string GetSongGroupKey(SongData song)
+    {
+        if (song == null)
+            return "null";
+
+        if (!string.IsNullOrWhiteSpace(song.songGroupId))
+            return SongData.SanitizeForFileName(song.songGroupId);
+
+        string title = song.SongTitle;
+        if (!string.IsNullOrWhiteSpace(title))
+        {
+            int bracket = title.LastIndexOf('[');
+            if (bracket > 0)
+                title = title[..bracket].Trim();
+        }
+
+        return SongData.SanitizeForFileName(string.IsNullOrWhiteSpace(title) ? song.name : title);
+    }
+
+    private void HideLegacyLayout(Canvas canvas, RectTransform root)
+    {
+        if (!hideLegacyLayout) return;
         for (int i = 0; i < canvas.transform.childCount; i++)
         {
             Transform child = canvas.transform.GetChild(i);
-            if (child == _generatedRoot)
+            if (child == root)
                 continue;
 
-            if (transform == child || transform.IsChildOf(child))
+            if (child == transform || transform.IsChildOf(child))
             {
                 CanvasGroup group = child.GetComponent<CanvasGroup>();
                 if (group == null)
                     group = child.gameObject.AddComponent<CanvasGroup>();
-
                 group.alpha = 0f;
                 group.interactable = false;
                 group.blocksRaycasts = false;
@@ -429,58 +674,86 @@ public class SongListManager : MonoBehaviour
         _previewAudioSource = GetComponent<AudioSource>();
         if (_previewAudioSource == null)
             _previewAudioSource = gameObject.AddComponent<AudioSource>();
-
         _previewAudioSource.playOnAwake = false;
         _previewAudioSource.spatialBlend = 0f;
     }
 
     private SongData GetFirstSong()
     {
-        foreach (SongData song in _songList)
-        {
-            if (song != null)
-                return song;
-        }
-
+        foreach (SongData song in _songList) if (song != null) return song;
         return null;
     }
 
-    private static string GetBpmLabel(SongData song)
+    private SongData GetInitialSong()
     {
-        return song != null && song._bpm > 0f ? $"BPM: {song._bpm:0.#}" : "BPM: --";
+        SongData selected = SelectedSongManager.Instance != null ? SelectedSongManager.Instance.SelectedSong : null;
+        if (selected != null && _songList.Contains(selected))
+            return selected;
+
+        string lastGroupId = PlayerPrefs.GetString(SelectedSongManager.LastSelectedSongGroupKey, string.Empty);
+        if (!string.IsNullOrWhiteSpace(lastGroupId))
+        {
+            foreach (SongData song in _songList)
+            {
+                if (song != null && GetSongGroupKey(song) == SongData.SanitizeForFileName(lastGroupId))
+                    return song;
+            }
+        }
+
+        return GetFirstSong();
     }
 
-    private static string GetDifficultyLabel(SongData song)
+    private static Difficulty LoadLastSelectedDifficulty()
+    {
+        int saved = PlayerPrefs.GetInt(SelectedSongManager.LastSelectedDifficultyKey, (int)Difficulty.Medium);
+        return System.Enum.IsDefined(typeof(Difficulty), saved) ? (Difficulty)saved : Difficulty.Medium;
+    }
+
+    private static Difficulty GetPreferredDifficulty(SongData song)
     {
         if (song == null)
-            return "--";
+            return Difficulty.Medium;
 
-        if (!string.IsNullOrWhiteSpace(song._difficulty))
-            return song._difficulty;
+        if (!string.IsNullOrWhiteSpace(song.normalChartFileName) || song.normalTimelineAsset != null)
+            return Difficulty.Medium;
+        if (!string.IsNullOrWhiteSpace(song.easyChartFileName) || song.easyTimelineAsset != null)
+            return Difficulty.Easy;
+        if (!string.IsNullOrWhiteSpace(song.hardChartFileName) || song.hardTimelineAsset != null)
+            return Difficulty.Hard;
 
-        return song.difficultyLevel.ToString();
+        return song.difficultyLevel;
     }
 
-    private static void LoadScene(string sceneName)
-    {
-        SceneLoadUtility.LoadSceneByName(sceneName);
-    }
+    private static string GetBpmLabel(SongData song) => song != null && song._bpm > 0f ? $"BPM: {song._bpm:0.#}" : "BPM: --";
+    private static string GetDifficultyLabel(SongData song) => song == null ? "--" : !string.IsNullOrWhiteSpace(song._difficulty) ? song._difficulty : GetDifficultyLabel(song.difficultyLevel);
+    private static string GetDifficultyLabel(Difficulty difficulty) => difficulty == Difficulty.Medium ? "Normal" : difficulty.ToString();
+    private static Color DifficultyColor(SongData song) => song != null ? DifficultyColor(song.difficultyLevel) : DifficultyColor(Difficulty.Easy);
+    private static Color DifficultyColor(Difficulty difficulty) => difficulty == Difficulty.Hard ? new Color(0.68f, 0.08f, 0.24f, 0.98f) : difficulty == Difficulty.Medium ? new Color(0.66f, 0.08f, 0.45f, 0.98f) : new Color(0.12f, 0.42f, 0.59f, 0.98f);
 
     private static bool WasConfirmPressedThisFrame()
     {
-#if ENABLE_LEGACY_INPUT_MANAGER
-        if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
-            return true;
-#endif
-
 #if ENABLE_INPUT_SYSTEM
-        Keyboard keyboard = Keyboard.current;
-        if (keyboard == null)
-            return false;
-
-        return keyboard.enterKey.wasPressedThisFrame || keyboard.numpadEnterKey.wasPressedThisFrame;
+        return Keyboard.current != null && (Keyboard.current.enterKey.wasPressedThisFrame || Keyboard.current.numpadEnterKey.wasPressedThisFrame);
 #else
-        return false;
+        return Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter);
+#endif
+    }
+
+    private static bool WasPreviousPressedThisFrame()
+    {
+#if ENABLE_INPUT_SYSTEM
+        return Keyboard.current != null && Keyboard.current.leftArrowKey.wasPressedThisFrame;
+#else
+        return Input.GetKeyDown(KeyCode.LeftArrow);
+#endif
+    }
+
+    private static bool WasNextPressedThisFrame()
+    {
+#if ENABLE_INPUT_SYSTEM
+        return Keyboard.current != null && Keyboard.current.rightArrowKey.wasPressedThisFrame;
+#else
+        return Input.GetKeyDown(KeyCode.RightArrow);
 #endif
     }
 
@@ -489,7 +762,6 @@ public class SongListManager : MonoBehaviour
         CanvasScaler scaler = canvas.GetComponent<CanvasScaler>();
         if (scaler == null)
             scaler = canvas.gameObject.AddComponent<CanvasScaler>();
-
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
         scaler.referenceResolution = new Vector2(1280f, 720f);
         scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
@@ -498,10 +770,8 @@ public class SongListManager : MonoBehaviour
 
     private static void EnsureEventSystem()
     {
-        if (FindFirstObjectByType<EventSystem>() != null)
-            return;
-
-        GameObject eventSystem = new GameObject("EventSystem");
+        if (FindFirstObjectByType<EventSystem>() != null) return;
+        GameObject eventSystem = new("EventSystem");
         eventSystem.AddComponent<EventSystem>();
         eventSystem.AddComponent<StandaloneInputModule>();
     }
@@ -509,70 +779,58 @@ public class SongListManager : MonoBehaviour
     private static void RemoveOldGeneratedRoot(Transform canvasTransform)
     {
         Transform oldRoot = canvasTransform.Find(GeneratedRootName);
-        if (oldRoot != null)
-            Destroy(oldRoot.gameObject);
+        if (oldRoot != null) Destroy(oldRoot.gameObject);
     }
 
-    private static RectTransform CreateRect(string objectName, Transform parent)
+    private static RectTransform CreateRect(string name, Transform parent)
     {
-        GameObject obj = new GameObject(objectName, typeof(RectTransform));
+        GameObject obj = new(name, typeof(RectTransform));
         RectTransform rect = obj.GetComponent<RectTransform>();
         rect.SetParent(parent, false);
         return rect;
     }
 
-    private static RectTransform CreatePanel(string objectName, Transform parent, Color color)
+    private static RectTransform CreatePanel(string name, Transform parent, Color color)
     {
-        RectTransform rect = CreateRect(objectName, parent);
-        Image image = rect.gameObject.AddComponent<Image>();
-        image.color = color;
+        RectTransform rect = CreateRect(name, parent);
+        rect.gameObject.AddComponent<Image>().color = color;
         return rect;
     }
 
-    private static TextMeshProUGUI CreateText(
-        string text,
-        Transform parent,
-        float fontSize,
-        FontStyles style,
-        TextAlignmentOptions alignment,
-        Color color,
-        Vector2 anchoredPosition,
-        Vector2 sizeDelta,
-        Vector2? anchorMin = null,
-        Vector2? anchorMax = null)
+    private static RectTransform CreateButton(string name, Transform parent, string text, Color color, float fontSize = 16f)
+    {
+        RectTransform rect = CreatePanel(name, parent, color);
+        Button button = rect.gameObject.AddComponent<Button>();
+        button.targetGraphic = rect.GetComponent<Image>();
+        CreateText(text, rect, fontSize, FontStyles.Bold, TextAlignmentOptions.Center, Color.white, Vector2.zero, new Vector2(120f, 36f));
+        return rect;
+    }
+
+    private static TextMeshProUGUI CreateText(string text, Transform parent, float size, FontStyles style, TextAlignmentOptions alignment, Color color, Vector2 position, Vector2 dimensions, Vector2? min = null, Vector2? max = null)
     {
         RectTransform rect = CreateRect("Text - " + text, parent);
-        Vector2 min = anchorMin ?? new Vector2(0.5f, 0.5f);
-        Vector2 max = anchorMax ?? min;
-        Anchor(rect, min, max, min, anchoredPosition, sizeDelta);
-
+        Vector2 anchorMin = min ?? new Vector2(0.5f, 0.5f);
+        Vector2 anchorMax = max ?? anchorMin;
+        Anchor(rect, anchorMin, anchorMax, anchorMin, position, dimensions);
         TextMeshProUGUI label = rect.gameObject.AddComponent<TextMeshProUGUI>();
         label.text = text;
-        label.fontSize = fontSize;
+        label.fontSize = size;
         label.fontStyle = style;
         label.alignment = alignment;
         label.color = color;
-        label.enableWordWrapping = false;
+        label.textWrappingMode = TextWrappingModes.NoWrap;
         label.overflowMode = TextOverflowModes.Ellipsis;
         label.raycastTarget = false;
         return label;
     }
 
-    private static void Stretch(RectTransform rect, float inset = 0f)
+    private static void Stretch(RectTransform rect)
     {
-        rect.anchorMin = Vector2.zero;
-        rect.anchorMax = Vector2.one;
-        rect.pivot = new Vector2(0.5f, 0.5f);
-        rect.anchoredPosition = Vector2.zero;
-        rect.sizeDelta = new Vector2(-inset * 2f, -inset * 2f);
+        rect.anchorMin = Vector2.zero; rect.anchorMax = Vector2.one; rect.pivot = new Vector2(0.5f, 0.5f); rect.anchoredPosition = Vector2.zero; rect.sizeDelta = Vector2.zero;
     }
 
-    private static void Anchor(RectTransform rect, Vector2 anchorMin, Vector2 anchorMax, Vector2 pivot, Vector2 anchoredPosition, Vector2 sizeDelta)
+    private static void Anchor(RectTransform rect, Vector2 min, Vector2 max, Vector2 pivot, Vector2 position, Vector2 size)
     {
-        rect.anchorMin = anchorMin;
-        rect.anchorMax = anchorMax;
-        rect.pivot = pivot;
-        rect.anchoredPosition = anchoredPosition;
-        rect.sizeDelta = sizeDelta;
+        rect.anchorMin = min; rect.anchorMax = max; rect.pivot = pivot; rect.anchoredPosition = position; rect.sizeDelta = size;
     }
 }
