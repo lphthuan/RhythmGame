@@ -79,6 +79,7 @@ public class SongListManager : MonoBehaviour
 
     private void Start()
     {
+        EnsureSelectedSongManager();
         if (buildGeneratedLayout)
         {
             BuildGeneratedLayout();
@@ -168,8 +169,9 @@ public class SongListManager : MonoBehaviour
         if (song == null)
             return;
 
-        if (SelectedSongManager.Instance != null)
-            SelectedSongManager.Instance.SetSelectedSong(song, _selectedDifficulty);
+        SelectedSongManager manager = EnsureSelectedSongManager();
+        if (manager != null)
+            manager.SetSelectedSong(song, _selectedDifficulty);
 
         if (_previewAudioSource != null)
             _previewAudioSource.Stop();
@@ -485,7 +487,7 @@ public class SongListManager : MonoBehaviour
         {
             if (song != null)
             {
-                CreateSongCard(song, _carouselContent);
+                CreateSongCard(song, parent);
                 CarouselCard card = _cards[song];
                 card.Rect.anchorMin = card.Rect.anchorMax = new Vector2(0.5f, 1f);
                 card.Rect.pivot = new Vector2(0.5f, 0.5f);
@@ -599,8 +601,9 @@ public class SongListManager : MonoBehaviour
             return;
 
         _selectedSong = song;
-        if (SelectedSongManager.Instance != null)
-            SelectedSongManager.Instance.SetSelectedSong(song, _selectedDifficulty);
+        SelectedSongManager manager = EnsureSelectedSongManager();
+        if (manager != null)
+            manager.SetSelectedSong(song, _selectedDifficulty);
 
         ShowSongDetails(song);
         CenterSelectedCard();
@@ -612,8 +615,12 @@ public class SongListManager : MonoBehaviour
     private void SelectDifficulty(Difficulty difficulty)
     {
         _selectedDifficulty = difficulty;
-        if (_selectedSong != null && SelectedSongManager.Instance != null)
-            SelectedSongManager.Instance.SetSelectedSong(_selectedSong, _selectedDifficulty);
+        if (_selectedSong != null)
+        {
+            SelectedSongManager manager = EnsureSelectedSongManager();
+            if (manager != null)
+                manager.SetSelectedSong(_selectedSong, _selectedDifficulty);
+        }
 
         if (_selectedSong != null)
             ShowSongDetails(_selectedSong);
@@ -992,16 +999,6 @@ public class SongListManager : MonoBehaviour
         if (named is RectTransform namedRect)
             return namedRect;
 
-        for (int i = 0; i < _carouselContent.childCount; i++)
-        {
-            Transform child = _carouselContent.GetChild(i);
-            if (child is RectTransform rect && child.name.StartsWith("Song Card -", System.StringComparison.Ordinal))
-                return rect;
-        }
-
-        if (_carouselContent.childCount > 0 && _carouselContent.GetChild(0) is RectTransform firstChild)
-            return firstChild;
-
         return null;
     }
 
@@ -1036,6 +1033,25 @@ public class SongListManager : MonoBehaviour
             _previewAudioSource = gameObject.AddComponent<AudioSource>();
         _previewAudioSource.playOnAwake = false;
         _previewAudioSource.spatialBlend = 0f;
+    }
+
+    private static SelectedSongManager EnsureSelectedSongManager()
+    {
+        if (SelectedSongManager.Instance != null)
+            return SelectedSongManager.Instance;
+
+        SelectedSongManager[] managers = FindObjectsByType<SelectedSongManager>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        foreach (SelectedSongManager manager in managers)
+        {
+            if (manager == null)
+                continue;
+
+            manager.gameObject.SetActive(true);
+            return SelectedSongManager.Instance != null ? SelectedSongManager.Instance : manager;
+        }
+
+        GameObject managerObject = new("SelectedSongManager");
+        return managerObject.AddComponent<SelectedSongManager>();
     }
 
     private SongData GetFirstSong()
