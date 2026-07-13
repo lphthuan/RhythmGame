@@ -152,16 +152,24 @@ public class SongListManager : MonoBehaviour
             return;
 
         if (_selectedSong == song)
+        {
+            SelectSong(song, false);
             PlaySelectedSong();
+        }
         else
             SelectSong(song, true);
     }
 
     public void PlaySelectedSong()
     {
-        SongData song = SelectedSongManager.Instance != null ? SelectedSongManager.Instance.SelectedSong : _selectedSong;
+        SongData song = _selectedSong != null
+            ? _selectedSong
+            : SelectedSongManager.Instance != null ? SelectedSongManager.Instance.SelectedSong : null;
         if (song == null)
             return;
+
+        if (SelectedSongManager.Instance != null)
+            SelectedSongManager.Instance.SetSelectedSong(song, _selectedDifficulty);
 
         if (_previewAudioSource != null)
             _previewAudioSource.Stop();
@@ -545,7 +553,7 @@ public class SongListManager : MonoBehaviour
         if (button == null)
             button = card.gameObject.AddComponent<Button>();
         button.targetGraphic = background;
-        button.onClick.RemoveAllListeners();
+        button.onClick = new Button.ButtonClickedEvent();
         button.onClick.AddListener(() => SelectOrPlaySong(song));
 
         Image art = (card.Find("Card Art/Art") ?? card.Find("Art"))?.GetComponent<Image>();
