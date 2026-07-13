@@ -258,15 +258,22 @@ public class SongDataEditor : Editor
         Rect previewRect = GUILayoutUtility.GetRect(0f, CoverPreviewHeight, GUILayout.ExpandWidth(true));
         GUI.Box(previewRect, GUIContent.none);
 
-        Texture2D texture = song.PreviewImage.texture;
-        Rect spriteRect = song.PreviewImage.textureRect;
-        Rect uv = new(
-            spriteRect.x / texture.width,
-            spriteRect.y / texture.height,
-            spriteRect.width / texture.width,
-            spriteRect.height / texture.height);
+        Texture2D previewTexture = AssetPreview.GetAssetPreview(song.PreviewImage);
+        if (previewTexture == null)
+            previewTexture = AssetPreview.GetMiniThumbnail(song.PreviewImage) as Texture2D;
 
-        GUI.DrawTextureWithTexCoords(previewRect, texture, uv, true);
+        if (previewTexture != null)
+        {
+            GUI.DrawTexture(previewRect, previewTexture, ScaleMode.ScaleToFit, true);
+        }
+        else
+        {
+            EditorGUI.LabelField(
+                previewRect,
+                "Cover preview unavailable for this texture format.",
+                EditorStyles.centeredGreyMiniLabel);
+        }
+
         EditorGUILayout.HelpBox("Cover chỉ bị crop/xoay trong giao diện chọn nhạc; file ảnh gốc không bị chỉnh sửa.", MessageType.None);
     }
 

@@ -30020,7 +30020,7 @@ MonoBehaviour:
   noteManager: {fileID: 2084120272}
   previewNoteParentToDisable: {fileID: 1224511598}
   initialPoolSize: 50
-  laneSpacing: 190
+  laneSpacing: 245
   hitlineY: -332.8571
   scrollSpeed: 1400
   touchRadius: 180.5
@@ -45516,18 +45516,18 @@ MonoBehaviour:
   - {fileID: 112516323}
   - {fileID: 843088762}
   laneCount: 4
-  laneAreaWidthRatio: 0.42
-  minLaneSpacing: 118
-  maxLaneSpacing: 190
+  laneAreaWidthRatio: 0.58
+  minLaneSpacing: 150
+  maxLaneSpacing: 245
   hitlineFromBottomRatio: 0.16
   hitlineOffsetY: 0
   hitlineJudgeDistanceRatio: 0.78
   touchRadiusRatio: 0.95
   verticalBleed: 96
-  appliedLaneSpacing: 190
+  appliedLaneSpacing: 245
   appliedHitlineY: -332.8571
-  appliedTouchRadius: 180.5
-  appliedHitlineJudgeDistance: 148.2
+  appliedTouchRadius: 232.75
+  appliedHitlineJudgeDistance: 191.1
 --- !u!224 &875557858
 RectTransform:
   m_ObjectHideFlags: 0
@@ -78535,7 +78535,7 @@ MonoBehaviour:
   - {fileID: -1300075440017740861, guid: 4cd62e4ac14585c4ba4af670f2977f88, type: 3}
   - {fileID: 5454844385163683328, guid: 583f1fd43017b7d4ea03d02fd7603048, type: 3}
   - {fileID: -3195511003665097036, guid: 7f144d904b359a647b0cd160036f90bb, type: 3}
-  laneFlashSize: {x: 190, y: 150}
+  laneFlashSize: {x: 245, y: 170}
   laneFlashFrameTime: 0.025
   laneFlashYOffset: 42
   useLaneLayoutSize: 1

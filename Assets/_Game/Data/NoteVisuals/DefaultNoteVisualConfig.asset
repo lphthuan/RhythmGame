@@ -16,31 +16,31 @@ MonoBehaviour:
     noteType: 0
     sprite: {fileID: 21300000, guid: 23558d02e0c9210478018bdd774c618c, type: 3}
     color: {r: 0.33, g: 0.86, b: 1, a: 1}
-    uiSize: {x: 140, y: 38}
+    uiSize: {x: 180, y: 40}
     preserveAspect: 0
     previewScale: {x: 0.14, y: 0.14, z: 1}
   styles:
   - noteType: 0
     sprite: {fileID: 21300000, guid: 23558d02e0c9210478018bdd774c618c, type: 3}
     color: {r: 0.33, g: 0.86, b: 1, a: 1}
-    uiSize: {x: 140, y: 38}
+    uiSize: {x: 180, y: 40}
     preserveAspect: 0
     previewScale: {x: 0.14, y: 0.14, z: 1}
   - noteType: 1
     sprite: {fileID: 21300000, guid: 7296aec9dcf46624681c8fa6e136526d, type: 3}
     color: {r: 1, g: 0.82, b: 0.28, a: 1}
-    uiSize: {x: 140, y: 90}
+    uiSize: {x: 180, y: 92}
     preserveAspect: 0
     previewScale: {x: 0.14, y: 0.12, z: 1}
   - noteType: 2
     sprite: {fileID: 21300000, guid: 4669296c8d28cae4c873e13991d00c53, type: 3}
     color: {r: 1, g: 0.45, b: 0.95, a: 1}
-    uiSize: {x: 140, y: 48}
+    uiSize: {x: 180, y: 50}
     preserveAspect: 0
     previewScale: {x: 0.14, y: 0.14, z: 1}
   - noteType: 3
     sprite: {fileID: 21300000, guid: cbe07193809fa4848a610613ea549bcf, type: 3}
     color: {r: 0.42, g: 1, b: 0.5, a: 1}
-    uiSize: {x: 140, y: 34}
+    uiSize: {x: 180, y: 36}
     preserveAspect: 0
     previewScale: {x: 0.14, y: 0.14, z: 1}
