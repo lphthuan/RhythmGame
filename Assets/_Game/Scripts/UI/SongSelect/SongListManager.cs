@@ -32,6 +32,9 @@ public class SongListManager : MonoBehaviour
     [SerializeField] private bool hideLegacyLayout = true;
     [SerializeField] private bool includeProjectSongData = true;
     [SerializeField] private string projectSongDataFolder = "Assets/_Game/Data/Songs";
+    [Tooltip("When an RG Generated Song Select object exists in the scene, Play Mode reuses it as an editable template instead of rebuilding every visual object.")]
+    [SerializeField] private bool reuseEditableScenePreviewInPlay = true;
+    [SerializeField] private RectTransform songCardTemplate;
     [SerializeField] private bool playPreviewOnSelect = true;
     [SerializeField] private float previewStartSeconds = 0f;
     [SerializeField] private Sprite selectScreenBackground;
@@ -53,6 +56,7 @@ public class SongListManager : MonoBehaviour
     private ScrollRect _carouselScrollRect;
     private RectTransform _carouselViewport;
     private RectTransform _carouselContent;
+    private RectTransform _runtimeCardTemplate;
     private Difficulty _selectedDifficulty = Difficulty.Medium;
     private readonly Dictionary<Difficulty, Image> _difficultyButtonImages = new();
     private readonly Dictionary<Difficulty, TextMeshProUGUI> _difficultyButtonLabels = new();
@@ -86,6 +90,32 @@ public class SongListManager : MonoBehaviour
             PopulateList();
         }
     }
+
+#if UNITY_EDITOR
+    [ContextMenu("Song Select/Build Edit Mode Preview")]
+    public void BuildEditModePreview()
+    {
+        BuildGeneratedLayout();
+        _selectedDifficulty = GetPreferredDifficulty(GetInitialSong());
+        SelectSong(GetInitialSong(), false);
+        UnityEditor.EditorUtility.SetDirty(gameObject);
+    }
+
+    [ContextMenu("Song Select/Clear Edit Mode Preview")]
+    public void ClearEditModePreview()
+    {
+        Canvas canvas = GetComponentInParent<Canvas>();
+        if (canvas == null)
+            canvas = FindFirstObjectByType<Canvas>();
+        if (canvas == null)
+            return;
+
+        RemoveOldGeneratedRoot(canvas.transform);
+        RestoreLegacyLayout(canvas);
+        _cards.Clear();
+        UnityEditor.EditorUtility.SetDirty(gameObject);
+    }
+#endif
 
     private void Update()
     {
@@ -170,13 +200,20 @@ public class SongListManager : MonoBehaviour
             return;
         }
 
-        RemoveOldGeneratedRoot(canvas.transform);
         MergeProjectSongData();
         ConsolidateSongListByGroupId();
         EnsureCanvasScaler(canvas);
         EnsureEventSystem();
         EnsurePreviewAudioSource();
         _cards.Clear();
+        _difficultyButtonImages.Clear();
+        _difficultyButtonLabels.Clear();
+        _difficultyButtonScores.Clear();
+
+        if (TryUseEditableScenePreview(canvas))
+            return;
+
+        RemoveOldGeneratedRoot(canvas.transform);
 
         RectTransform root = CreateRect(GeneratedRootName, canvas.transform);
         Stretch(root);
@@ -198,6 +235,112 @@ public class SongListManager : MonoBehaviour
         BuildCarousel(root);
         CreateText("Tap a card to select. Tap the selected card again to play.", root, 14, FontStyles.Normal,
             TextAlignmentOptions.Right, new Color(1f, 1f, 1f, 0.80f), new Vector2(-28f, 18f), new Vector2(560f, 28f), Vector2.one, Vector2.one);
+    }
+
+    private bool TryUseEditableScenePreview(Canvas canvas)
+    {
+        if (!Application.isPlaying || !reuseEditableScenePreviewInPlay)
+            return false;
+
+        RectTransform root = canvas.transform.Find(GeneratedRootName) as RectTransform;
+        if (root == null)
+            return false;
+
+        root.gameObject.SetActive(true);
+        root.SetAsLastSibling();
+        HideLegacyLayout(canvas, root);
+        BindEditableTopBar(root);
+        BindEditableSongDetail(root);
+        BindEditableCarousel(root);
+        return _titleText != null && _previewArt != null && _carouselContent != null;
+    }
+
+    private void BindEditableTopBar(RectTransform root)
+    {
+        Button back = root.Find("Top Bar/Back")?.GetComponent<Button>();
+        if (back != null)
+        {
+            back.onClick.RemoveAllListeners();
+            back.onClick.AddListener(BackToMainMenu);
+        }
+
+        Button settings = root.Find("Top Bar/Settings")?.GetComponent<Button>();
+        if (settings != null)
+        {
+            settings.onClick.RemoveAllListeners();
+            settings.onClick.AddListener(OpenSettings);
+        }
+    }
+
+    private void BindEditableSongDetail(RectTransform root)
+    {
+        _titleText = FindText(root, "Selected Song Title Text") ?? FirstText(root.Find("Selected Song Detail/Selected Song Title Clip"));
+        _artistText = FindText(root, "Selected Song Hint Text");
+        _bpmText = FindText(root, "Selected Song BPM Text");
+        _previewArt = (root.Find("Selected Song Detail/Song Art Frame/Song Art") ?? root.Find("Selected Song Detail/Song Art Frame/Art"))?.GetComponent<Image>();
+        _previewArtFitter = _previewArt != null ? _previewArt.GetComponent<AspectRatioFitter>() : null;
+        if (_previewArt != null && _previewArtFitter == null)
+        {
+            _previewArtFitter = _previewArt.gameObject.AddComponent<AspectRatioFitter>();
+            _previewArtFitter.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
+        }
+        _noArtText = FindText(root, "No Art Label") ?? FirstText(root.Find("Selected Song Detail/Song Art Frame"));
+        _lastScoreText = FindText(root, "Last Score Value");
+        _bestScoreText = FindText(root, "Best Score Value");
+        _rankText = FindText(root, "Best Rank Value");
+
+        BindDifficultyButton(root, Difficulty.Easy, "EASY Difficulty");
+        BindDifficultyButton(root, Difficulty.Medium, "NORMAL Difficulty");
+        BindDifficultyButton(root, Difficulty.Hard, "HARD Difficulty");
+    }
+
+    private void BindDifficultyButton(RectTransform root, Difficulty difficulty, string pathName)
+    {
+        Transform target = root.Find("Selected Song Detail/Difficulty Buttons/" + pathName);
+        if (target == null)
+            return;
+
+        Image image = target.GetComponent<Image>();
+        Button button = target.GetComponent<Button>();
+        if (button == null)
+            button = target.gameObject.AddComponent<Button>();
+        button.targetGraphic = image;
+        button.onClick.RemoveAllListeners();
+        button.onClick.AddListener(() => SelectDifficulty(difficulty));
+
+        _difficultyButtonImages[difficulty] = image;
+        TextMeshProUGUI label = FindText(target, "Difficulty Label") ?? FirstText(target);
+        TextMeshProUGUI score = FindText(target, "Difficulty Best Score");
+        if (label != null)
+            _difficultyButtonLabels[difficulty] = label;
+        if (score != null)
+            _difficultyButtonScores[difficulty] = score;
+        if (difficulty == Difficulty.Medium)
+            _difficultyText = label;
+    }
+
+    private void BindEditableCarousel(RectTransform root)
+    {
+        _carouselScrollRect = root.Find("Song Carousel")?.GetComponent<ScrollRect>();
+        _carouselViewport = root.Find("Song Carousel/Viewport") as RectTransform;
+        _carouselContent = root.Find("Song Carousel/Viewport/Content") as RectTransform;
+        if (_carouselScrollRect == null || _carouselViewport == null || _carouselContent == null)
+            return;
+
+        _carouselScrollRect.viewport = _carouselViewport;
+        _carouselScrollRect.content = _carouselContent;
+        _carouselScrollRect.onValueChanged.RemoveAllListeners();
+        _carouselScrollRect.onValueChanged.AddListener(_ => UpdateCarousel());
+
+        SongSwipeSelector swipeSelector = _carouselViewport.GetComponent<SongSwipeSelector>();
+        if (swipeSelector == null)
+            swipeSelector = _carouselViewport.gameObject.AddComponent<SongSwipeSelector>();
+        swipeSelector.Configure(this);
+
+        _runtimeCardTemplate = ResolveRuntimeCardTemplate();
+        ClearCarouselContentButTemplate();
+        _carouselContent.sizeDelta = new Vector2(_carouselContent.sizeDelta.x, Mathf.Max(560f, _songList.Count * 118f + 84f));
+        CreateCarouselCards(_carouselContent);
     }
 
     private void BuildTopBar(RectTransform root)
@@ -245,9 +388,12 @@ public class SongListManager : MonoBehaviour
         Anchor(titleClip, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(22f, -74f), new Vector2(355f, 50f));
         titleClip.gameObject.AddComponent<RectMask2D>();
         _titleText = CreateText("", titleClip, 36, FontStyles.Bold, TextAlignmentOptions.Left, Color.white, Vector2.zero, new Vector2(760f, 50f), new Vector2(0f, 0.5f), new Vector2(0f, 0.5f));
+        _titleText.gameObject.name = "Selected Song Title Text";
         _titleText.gameObject.AddComponent<SongTitleMarquee>();
         _artistText = CreateText("", detail, 17, FontStyles.Normal, TextAlignmentOptions.Left, new Color(0.88f, 0.80f, 0.96f, 1f), new Vector2(24f, -120f), new Vector2(340f, 28f), new Vector2(0f, 1f), new Vector2(0f, 1f));
+        _artistText.gameObject.name = "Selected Song Hint Text";
         _bpmText = CreateText("BPM: --", detail, 19, FontStyles.Bold, TextAlignmentOptions.Left, new Color(1f, 0.81f, 0.32f, 1f), new Vector2(24f, -155f), new Vector2(260f, 30f), new Vector2(0f, 1f), new Vector2(0f, 1f));
+        _bpmText.gameObject.name = "Selected Song BPM Text";
 
         RectTransform artFrame = CreatePanel("Song Art Frame", detail, new Color(0.48f, 0.25f, 0.62f, 0.94f));
         Anchor(artFrame, new Vector2(0.43f, 0.09f), new Vector2(0.96f, 0.76f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
@@ -258,14 +404,18 @@ public class SongListManager : MonoBehaviour
         _previewArtFitter = _previewArt.gameObject.AddComponent<AspectRatioFitter>();
         _previewArtFitter.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
         _noArtText = CreateText("NO ART", artFrame, 31, FontStyles.Bold, TextAlignmentOptions.Center, new Color(1f, 1f, 1f, 0.48f), Vector2.zero, new Vector2(260f, 55f));
+        _noArtText.gameObject.name = "No Art Label";
 
         RectTransform score = CreatePanel("Score Panel", detail, new Color(0.10f, 0.05f, 0.16f, 0.78f));
         Anchor(score, new Vector2(0.035f, 0.07f), new Vector2(0.40f, 0.43f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
         CreateText("LAST SCORE", score, 13, FontStyles.Bold, TextAlignmentOptions.Center, new Color(0.86f, 0.75f, 1f, 1f), new Vector2(0f, 46f), new Vector2(210f, 22f));
         _lastScoreText = CreateText("0000000", score, 24, FontStyles.Bold, TextAlignmentOptions.Center, Color.white, new Vector2(0f, 20f), new Vector2(220f, 30f));
+        _lastScoreText.gameObject.name = "Last Score Value";
         CreateText("BEST SCORE", score, 13, FontStyles.Bold, TextAlignmentOptions.Center, new Color(0.86f, 0.75f, 1f, 1f), new Vector2(-35f, -17f), new Vector2(160f, 22f));
         _bestScoreText = CreateText("0000000", score, 19, FontStyles.Bold, TextAlignmentOptions.Center, Color.white, new Vector2(-25f, -39f), new Vector2(165f, 28f));
+        _bestScoreText.gameObject.name = "Best Score Value";
         _rankText = CreateText("-", score, 32, FontStyles.Bold, TextAlignmentOptions.Center, new Color(1f, 0.55f, 0.25f, 1f), new Vector2(77f, -28f), new Vector2(56f, 54f));
+        _rankText.gameObject.name = "Best Rank Value";
     }
 
     private void CreateDifficultyButton(RectTransform parent, Difficulty difficulty, string label, float x)
@@ -279,6 +429,8 @@ public class SongListManager : MonoBehaviour
 
         TextMeshProUGUI nameText = CreateText(label, rect, 14, FontStyles.Bold, TextAlignmentOptions.Center, Color.white, new Vector2(0f, 8f), new Vector2(104f, 20f));
         TextMeshProUGUI scoreText = CreateText("0000000", rect, 10, FontStyles.Bold, TextAlignmentOptions.Center, new Color(1f, 1f, 1f, 0.80f), new Vector2(0f, -11f), new Vector2(104f, 18f));
+        nameText.gameObject.name = "Difficulty Label";
+        scoreText.gameObject.name = "Difficulty Best Score";
 
         _difficultyButtonImages[difficulty] = rect.GetComponent<Image>();
         _difficultyButtonLabels[difficulty] = nameText;
@@ -315,6 +467,11 @@ public class SongListManager : MonoBehaviour
         _carouselScrollRect.content = _carouselContent;
         _carouselScrollRect.onValueChanged.AddListener(_ => UpdateCarousel());
 
+        CreateCarouselCards(_carouselContent);
+    }
+
+    private void CreateCarouselCards(RectTransform parent)
+    {
         int songIndex = 0;
         foreach (SongData song in _songList)
         {
@@ -332,6 +489,12 @@ public class SongListManager : MonoBehaviour
 
     private void CreateSongCard(SongData song, RectTransform parent)
     {
+        if (_runtimeCardTemplate != null && Application.isPlaying)
+        {
+            CreateSongCardFromTemplate(song, parent);
+            return;
+        }
+
         RectTransform card = CreatePanel("Song Card - " + song.SongTitle, parent, new Color(0.11f, 0.03f, 0.16f, 0.92f));
         card.sizeDelta = new Vector2(430f, 96f);
         Image background = card.GetComponent<Image>();
@@ -351,19 +514,75 @@ public class SongListManager : MonoBehaviour
         RectTransform difficulty = CreatePanel("Difficulty", card, DifficultyColor(song));
         Anchor(difficulty, new Vector2(0.24f, 0f), new Vector2(0.39f, 1f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
         TextMeshProUGUI difficultyText = CreateText(GetDifficultyLabel(song), difficulty, 13, FontStyles.Bold, TextAlignmentOptions.Center, Color.white, Vector2.zero, new Vector2(62f, 34f));
+        difficultyText.gameObject.name = "Difficulty Label";
         RectTransform textArea = CreateRect("Text", card);
         Anchor(textArea, new Vector2(0.40f, 0f), new Vector2(0.78f, 1f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
         RectTransform titleClip = CreateRect("Title Clip", textArea);
         Anchor(titleClip, new Vector2(0f, 0.5f), new Vector2(1f, 0.5f), new Vector2(0f, 0.5f), new Vector2(4f, 15f), new Vector2(-8f, 28f));
         titleClip.gameObject.AddComponent<RectMask2D>();
         TextMeshProUGUI title = CreateText(song.SongTitle, titleClip, 17, FontStyles.Bold, TextAlignmentOptions.Left, Color.white, Vector2.zero, new Vector2(460f, 28f), new Vector2(0f, 0.5f), new Vector2(0f, 0.5f));
+        title.gameObject.name = "Card Title";
         SongTitleMarquee marquee = title.gameObject.AddComponent<SongTitleMarquee>();
         TextMeshProUGUI bpm = CreateText(GetBpmLabel(song), textArea, 12, FontStyles.Normal, TextAlignmentOptions.Left, new Color(0.97f, 0.86f, 1f, 1f), new Vector2(4f, -18f), new Vector2(170f, 22f), new Vector2(0f, 0.5f), new Vector2(0f, 0.5f));
+        bpm.gameObject.name = "Card BPM";
         RectTransform scorePanel = CreatePanel("Card Score", card, new Color(0.18f, 0.04f, 0.17f, 0.72f));
         Anchor(scorePanel, new Vector2(0.79f, 0f), new Vector2(1f, 1f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
         TextMeshProUGUI rank = CreateText("-", scorePanel, 28, FontStyles.Bold, TextAlignmentOptions.Center, new Color(1f, 0.55f, 0.82f, 1f), new Vector2(0f, 14f), new Vector2(84f, 34f));
         TextMeshProUGUI bestScore = CreateText("0000000", scorePanel, 12, FontStyles.Bold, TextAlignmentOptions.Center, new Color(1f, 1f, 1f, 0.86f), new Vector2(0f, -18f), new Vector2(86f, 20f));
+        rank.gameObject.name = "Card Rank";
+        bestScore.gameObject.name = "Card Best Score";
         _cards[song] = new CarouselCard { Rect = card, Background = background, Art = art, Difficulty = difficultyText, Title = title, Bpm = bpm, Rank = rank, BestScore = bestScore, Marquee = marquee };
+    }
+
+    private void CreateSongCardFromTemplate(SongData song, RectTransform parent)
+    {
+        RectTransform card = Instantiate(_runtimeCardTemplate, parent, false);
+        card.name = "Song Card - " + song.SongTitle;
+        card.gameObject.SetActive(true);
+
+        Image background = card.GetComponent<Image>();
+        Button button = card.GetComponent<Button>();
+        if (button == null)
+            button = card.gameObject.AddComponent<Button>();
+        button.targetGraphic = background;
+        button.onClick.RemoveAllListeners();
+        button.onClick.AddListener(() => SelectOrPlaySong(song));
+
+        Image art = (card.Find("Card Art/Art") ?? card.Find("Art"))?.GetComponent<Image>();
+        TextMeshProUGUI difficultyText = FindText(card, "Difficulty Label");
+        TextMeshProUGUI title = FindText(card, "Card Title");
+        TextMeshProUGUI bpm = FindText(card, "Card BPM");
+        TextMeshProUGUI rank = FindText(card, "Card Rank");
+        TextMeshProUGUI bestScore = FindText(card, "Card Best Score");
+        if (background == null || title == null)
+        {
+            Destroy(card.gameObject);
+            CreateDefaultRuntimeSongCard(song, parent);
+            return;
+        }
+
+        SongTitleMarquee marquee = title.GetComponent<SongTitleMarquee>();
+        if (marquee == null)
+            marquee = title.gameObject.AddComponent<SongTitleMarquee>();
+
+        if (art != null)
+        {
+            art.sprite = song.PreviewImage;
+            art.preserveAspect = false;
+            art.raycastTarget = false;
+        }
+        title.text = song.SongTitle;
+        if (bpm != null)
+            bpm.text = GetBpmLabel(song);
+        _cards[song] = new CarouselCard { Rect = card, Background = background, Art = art, Difficulty = difficultyText, Title = title, Bpm = bpm, Rank = rank, BestScore = bestScore, Marquee = marquee };
+    }
+
+    private void CreateDefaultRuntimeSongCard(SongData song, RectTransform parent)
+    {
+        RectTransform template = _runtimeCardTemplate;
+        _runtimeCardTemplate = null;
+        CreateSongCard(song, parent);
+        _runtimeCardTemplate = template;
     }
 
     private void SelectSong(SongData song, bool playPreview)
@@ -406,25 +625,37 @@ public class SongListManager : MonoBehaviour
 
     private void ShowSongDetails(SongData song)
     {
-        _titleText.text = song.SongTitle;
-        SongTitleMarquee detailMarquee = _titleText.GetComponent<SongTitleMarquee>();
-        if (detailMarquee != null)
-            detailMarquee.ResetScroll();
-        _artistText.text = "Tap selected song again to start.";
-        _bpmText.text = GetBpmLabel(song);
-        _previewArt.sprite = song.PreviewImage;
-        _previewArt.color = song.PreviewImage != null ? Color.white : new Color(0.38f, 0.19f, 0.56f, 1f);
-        _noArtText.gameObject.SetActive(song.PreviewImage == null);
-        if (song.PreviewImage != null)
+        if (_titleText != null)
+        {
+            _titleText.text = song.SongTitle;
+            SongTitleMarquee detailMarquee = _titleText.GetComponent<SongTitleMarquee>();
+            if (detailMarquee != null)
+                detailMarquee.ResetScroll();
+        }
+        if (_artistText != null)
+            _artistText.text = "Tap selected song again to start.";
+        if (_bpmText != null)
+            _bpmText.text = GetBpmLabel(song);
+        if (_previewArt != null)
+        {
+            _previewArt.sprite = song.PreviewImage;
+            _previewArt.color = song.PreviewImage != null ? Color.white : new Color(0.38f, 0.19f, 0.56f, 1f);
+        }
+        if (_noArtText != null)
+            _noArtText.gameObject.SetActive(song.PreviewImage == null);
+        if (song.PreviewImage != null && _previewArtFitter != null)
         {
             Rect rect = song.PreviewImage.rect;
             _previewArtFitter.aspectRatio = rect.height > 0f ? rect.width / rect.height : 1f;
         }
 
         SongPlayStats stats = SongPlayStats.Load(song, _selectedDifficulty);
-        _lastScoreText.text = stats.LastScore.ToString("D7");
-        _bestScoreText.text = stats.BestScore.ToString("D7");
-        _rankText.text = string.IsNullOrEmpty(stats.BestRank) ? "-" : stats.BestRank;
+        if (_lastScoreText != null)
+            _lastScoreText.text = stats.LastScore.ToString("D7");
+        if (_bestScoreText != null)
+            _bestScoreText.text = stats.BestScore.ToString("D7");
+        if (_rankText != null)
+            _rankText.text = string.IsNullOrEmpty(stats.BestRank) ? "-" : stats.BestRank;
         UpdateDifficultyButtons();
     }
 
@@ -432,6 +663,8 @@ public class SongListManager : MonoBehaviour
     {
         foreach (KeyValuePair<Difficulty, Image> item in _difficultyButtonImages)
         {
+            if (item.Value == null)
+                continue;
             bool selected = item.Key == _selectedDifficulty;
             item.Value.color = selected ? DifficultyColor(item.Key) : new Color(0.12f, 0.08f, 0.18f, 0.86f);
             RectTransform rect = item.Value.rectTransform;
@@ -440,12 +673,16 @@ public class SongListManager : MonoBehaviour
 
         foreach (KeyValuePair<Difficulty, TextMeshProUGUI> item in _difficultyButtonLabels)
         {
+            if (item.Value == null)
+                continue;
             bool selected = item.Key == _selectedDifficulty;
             item.Value.color = selected ? Color.white : new Color(1f, 1f, 1f, 0.68f);
         }
 
         foreach (KeyValuePair<Difficulty, TextMeshProUGUI> item in _difficultyButtonScores)
         {
+            if (item.Value == null)
+                continue;
             SongPlayStats stats = _selectedSong != null ? SongPlayStats.Load(_selectedSong, item.Key) : default;
             bool selected = item.Key == _selectedDifficulty;
             item.Value.text = stats.BestScore.ToString("D7");
@@ -483,6 +720,8 @@ public class SongListManager : MonoBehaviour
 
         foreach (KeyValuePair<SongData, CarouselCard> item in _cards)
         {
+            if (item.Value.Rect == null)
+                continue;
             float localY = _carouselViewport.InverseTransformPoint(item.Value.Rect.position).y;
             float t = Mathf.Clamp01(1f - Mathf.Abs(localY) / 220f);
             float scale = Mathf.Lerp(0.74f, 1.12f, t);
@@ -492,13 +731,21 @@ public class SongListManager : MonoBehaviour
             Color targetColor = item.Key == _selectedSong
                 ? new Color(0.60f, 0.08f, 0.44f, 0.98f)
                 : new Color(0.11f, 0.03f, 0.16f, 0.92f);
-            item.Value.Background.color = Color.Lerp(item.Value.Background.color, targetColor, lerpSpeed);
+            if (item.Value.Background != null)
+                item.Value.Background.color = Color.Lerp(item.Value.Background.color, targetColor, lerpSpeed);
             Difficulty displayDifficulty = item.Key == _selectedSong ? _selectedDifficulty : GetPreferredDifficulty(item.Key);
             SongPlayStats stats = SongPlayStats.Load(item.Key, displayDifficulty);
-            item.Value.Difficulty.text = GetDifficultyLabel(displayDifficulty).ToUpperInvariant();
-            item.Value.Difficulty.transform.parent.GetComponent<Image>().color = DifficultyColor(displayDifficulty);
-            item.Value.Rank.text = string.IsNullOrEmpty(stats.BestRank) ? "-" : stats.BestRank;
-            item.Value.BestScore.text = stats.BestScore.ToString("D7");
+            if (item.Value.Difficulty != null)
+            {
+                item.Value.Difficulty.text = GetDifficultyLabel(displayDifficulty).ToUpperInvariant();
+                Image difficultyImage = item.Value.Difficulty.transform.parent.GetComponent<Image>();
+                if (difficultyImage != null)
+                    difficultyImage.color = DifficultyColor(displayDifficulty);
+            }
+            if (item.Value.Rank != null)
+                item.Value.Rank.text = string.IsNullOrEmpty(stats.BestRank) ? "-" : stats.BestRank;
+            if (item.Value.BestScore != null)
+                item.Value.BestScore.text = stats.BestScore.ToString("D7");
         }
     }
 
@@ -518,6 +765,8 @@ public class SongListManager : MonoBehaviour
     private void PlayPreview(SongData song)
     {
         if (_previewAudioSource == null || song == null || song.audioClip == null)
+            return;
+        if (!Application.isPlaying)
             return;
         _previewAudioSource.Stop();
         _previewAudioSource.clip = song.audioClip;
@@ -702,6 +951,76 @@ public class SongListManager : MonoBehaviour
         }
     }
 
+    private static void RestoreLegacyLayout(Canvas canvas)
+    {
+        if (canvas == null)
+            return;
+
+        for (int i = 0; i < canvas.transform.childCount; i++)
+        {
+            Transform child = canvas.transform.GetChild(i);
+            if (child.name == GeneratedRootName)
+                continue;
+
+            child.gameObject.SetActive(true);
+            CanvasGroup group = child.GetComponent<CanvasGroup>();
+            if (group == null)
+                continue;
+
+            group.alpha = 1f;
+            group.interactable = true;
+            group.blocksRaycasts = true;
+        }
+    }
+
+    private RectTransform ResolveRuntimeCardTemplate()
+    {
+        if (songCardTemplate != null)
+            return songCardTemplate;
+        if (_carouselContent == null)
+            return null;
+
+        Transform named = _carouselContent.Find("Song Card Template");
+        if (named is RectTransform namedRect)
+            return namedRect;
+
+        for (int i = 0; i < _carouselContent.childCount; i++)
+        {
+            Transform child = _carouselContent.GetChild(i);
+            if (child is RectTransform rect && child.name.StartsWith("Song Card -", System.StringComparison.Ordinal))
+                return rect;
+        }
+
+        if (_carouselContent.childCount > 0 && _carouselContent.GetChild(0) is RectTransform firstChild)
+            return firstChild;
+
+        return null;
+    }
+
+    private void ClearCarouselContentButTemplate()
+    {
+        if (_carouselContent == null)
+            return;
+
+        for (int i = _carouselContent.childCount - 1; i >= 0; i--)
+        {
+            Transform child = _carouselContent.GetChild(i);
+            if (child == _runtimeCardTemplate)
+                continue;
+
+            if (Application.isPlaying)
+                Destroy(child.gameObject);
+            else
+                DestroyImmediate(child.gameObject);
+        }
+
+        if (_runtimeCardTemplate == null)
+            return;
+
+        _runtimeCardTemplate.name = "Song Card Template";
+        _runtimeCardTemplate.gameObject.SetActive(false);
+    }
+
     private void EnsurePreviewAudioSource()
     {
         _previewAudioSource = GetComponent<AudioSource>();
@@ -812,7 +1131,13 @@ public class SongListManager : MonoBehaviour
     private static void RemoveOldGeneratedRoot(Transform canvasTransform)
     {
         Transform oldRoot = canvasTransform.Find(GeneratedRootName);
-        if (oldRoot != null) Destroy(oldRoot.gameObject);
+        if (oldRoot == null)
+            return;
+
+        if (Application.isPlaying)
+            Destroy(oldRoot.gameObject);
+        else
+            DestroyImmediate(oldRoot.gameObject);
     }
 
     private static RectTransform CreateRect(string name, Transform parent)
@@ -856,6 +1181,26 @@ public class SongListManager : MonoBehaviour
         TmpRuntimeFontFallback.Apply(label);
         label.text = text;
         return label;
+    }
+
+    private static TextMeshProUGUI FindText(Transform root, string objectName)
+    {
+        if (root == null || string.IsNullOrWhiteSpace(objectName))
+            return null;
+
+        TextMeshProUGUI[] labels = root.GetComponentsInChildren<TextMeshProUGUI>(true);
+        foreach (TextMeshProUGUI label in labels)
+        {
+            if (label != null && label.gameObject.name == objectName)
+                return label;
+        }
+
+        return null;
+    }
+
+    private static TextMeshProUGUI FirstText(Transform root)
+    {
+        return root != null ? root.GetComponentInChildren<TextMeshProUGUI>(true) : null;
     }
 
     private static void Stretch(RectTransform rect)
