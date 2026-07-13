@@ -38,6 +38,7 @@ MonoBehaviour:
     - Assembly-CSharp
     - Dypsloom.RhythmTimeline
     - Dypsloom.Shared
+    - MCPForUnity.Runtime
     showAdvancedSettings: 0
   addMgrToSceneAutomatically: 0
   autoUpdateReferences: 1
