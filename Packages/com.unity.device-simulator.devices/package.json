@@ -1,0 +1,7 @@
+{
+  "name": "com.unity.device-simulator.devices",
+  "displayName": "RhythmGame Device Simulator Devices",
+  "version": "1.0.1",
+  "unity": "6000.0",
+  "description": "Project-owned iPhone simulator definition with an uncompressed readable overlay."
+}
