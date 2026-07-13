@@ -23,6 +23,8 @@ public class UIManager : MonoBehaviour
 
     private bool isCountingDown = false;
     private const int SettingsOverlaySortingOrder = 1000;
+    private RectTransform noteSpeedPreviewMarker;
+    private TextMeshProUGUI noteSpeedPreviewValue;
 
     [Header("Settings Tabs Content")]
     public GameObject contentAudio;
@@ -79,27 +81,31 @@ public class UIManager : MonoBehaviour
     private int lateEarlyPosIndex = 0;
     private string[] lateEarlyPositions = { "Middle", "Top", "Bottom" };
 
-    private void Start() 
-    { 
-        LoadSettings(); 
+    private void Start()
+    {
+        LoadSettings();
+        NormalizeOffsetTextLayout();
+        BuildNoteSpeedPreview();
         if (settingsOverlayOnly)
         {
             TogglePanel(false, false, false, false);
             return;
         }
 
-        if (isGameplayScene) 
+        if (isGameplayScene)
         {
             StartGame();
         }
-        else 
+        else
         {
-            OpenLobby(); 
+            OpenLobby();
         }
     }
 
     private void Update()
     {
+        UpdateNoteSpeedPreview();
+
         if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
         {
             if (gameplayPanel != null && gameplayPanel.activeSelf)
@@ -128,20 +134,21 @@ public class UIManager : MonoBehaviour
         Time.timeScale = 1f;
     }
 
-    public void OpenSettings() 
-    { 
+    public void OpenSettings()
+    {
         if (!gameObject.activeSelf)
             gameObject.SetActive(true);
 
         BringSettingsCanvasToFront();
         TogglePanel(false, false, true, false);
+        NormalizeOffsetTextLayout();
 
         if (settingsPopup != null)
         {
-            settingsPopup.SetActive(true); 
+            settingsPopup.SetActive(true);
             settingsPopup.transform.SetAsLastSibling();
         }
-        OpenTabGameplay(); 
+        OpenTabGameplay();
     }
     public void CloseSettingsAndSave() { SaveSettings(); settingsPopup.SetActive(false); }
 
@@ -179,7 +186,7 @@ public class UIManager : MonoBehaviour
 
     // --- LOGIC GAMEPLAY ---
     public void ToggleSkillDisplay() { isSkillDisplayEnabled = !isSkillDisplayEnabled; textSkillDisplay.text = isSkillDisplayEnabled ? "Enabled" : "Disabled"; }
-    public void ChangeNoteSpeed(float amount) { currentNoteSpeed = Mathf.Clamp(currentNoteSpeed + amount, RuntimeGameplaySettings.MinNoteSpeedSetting, RuntimeGameplaySettings.MaxNoteSpeedSetting); if (textNoteSpeed != null) textNoteSpeed.text = currentNoteSpeed.ToString("F1"); RuntimeGameplaySettings.NoteSpeedMultiplier = currentNoteSpeed; RuntimeGameplaySettings.Save(); }
+    public void ChangeNoteSpeed(float amount) { currentNoteSpeed = Mathf.Clamp(currentNoteSpeed + amount, RuntimeGameplaySettings.MinNoteSpeedSetting, RuntimeGameplaySettings.MaxNoteSpeedSetting); if (textNoteSpeed != null) textNoteSpeed.text = currentNoteSpeed.ToString("F1"); RuntimeGameplaySettings.NoteSpeedMultiplier = currentNoteSpeed; RuntimeGameplaySettings.Save(); UpdateNoteSpeedPreview(); }
     public void TogglePauseType() { pauseTypeIndex = (pauseTypeIndex + 1) % pauseTypes.Length; textPauseType.text = pauseTypes[pauseTypeIndex]; }
     public void ToggleStaminaNotif() { isStaminaNotifEnabled = !isStaminaNotifEnabled; textStaminaNotif.text = isStaminaNotifEnabled ? "Enabled" : "Disabled"; }
     public void TogglePureLateEarly() { isPureLateEarlyEnabled = !isPureLateEarlyEnabled; textPureLateEarly.text = isPureLateEarlyEnabled ? "Enabled" : "Disabled"; }
@@ -188,7 +195,7 @@ public class UIManager : MonoBehaviour
 
     // --- LOGIC AUDIO ---
     public void ChangeVolume(int amount) { currentVolume = Mathf.Clamp(currentVolume + amount, 0, 100); if (textNoteVolume != null) textNoteVolume.text = currentVolume + "%"; RuntimeGameplaySettings.MusicVolumePercent = currentVolume; RuntimeGameplaySettings.Save(); }
-    public void ChangeAudioOffset(int amount) { currentOffset = Mathf.Clamp(currentOffset + amount, -500, 1000); if (textOffset != null) textOffset.text = currentOffset.ToString(); RuntimeGameplaySettings.AudioOffsetMs = currentOffset; RuntimeGameplaySettings.Save(); }
+    public void ChangeAudioOffset(int amount) { currentOffset = Mathf.Clamp(currentOffset + amount, -500, 1000); if (textOffset != null) { textOffset.text = currentOffset.ToString(); NormalizeOffsetTextLayout(); } RuntimeGameplaySettings.AudioOffsetMs = currentOffset; RuntimeGameplaySettings.Save(); }
     public void ToggleAudioPreset() { isHeadphonesPreset = !isHeadphonesPreset; if (textAudioPreset != null) textAudioPreset.text = isHeadphonesPreset ? "Headphones" : "Speaker"; RuntimeGameplaySettings.HeadphonesPreset = isHeadphonesPreset; RuntimeGameplaySettings.Save(); }
 
     // --- LOGIC VISUAL ---
@@ -241,33 +248,140 @@ public class UIManager : MonoBehaviour
         isColorblindModeEnabled = PlayerPrefs.GetInt("VisualColorblind", 0) == 1; if (textColorblindMode != null) textColorblindMode.text = isColorblindModeEnabled ? "Enabled" : "Disabled";
         frpmIndex = PlayerPrefs.GetInt("VisualFRPM", 0); if (textFRPMIndicator != null) textFRPMIndicator.text = frpmPositions[frpmIndex];
         lateEarlyPosIndex = PlayerPrefs.GetInt("VisualLateEarlyPos", 0); if (textLateEarlyPosition != null) textLateEarlyPosition.text = lateEarlyPositions[lateEarlyPosIndex];
+        NormalizeOffsetTextLayout();
     }
 
-    public void PauseGame() 
-    { 
+    private void NormalizeOffsetTextLayout()
+    {
+        if (textOffset == null)
+            return;
+
+        RectTransform rect = textOffset.rectTransform;
+        if (rect != null && rect.sizeDelta.x < 92f)
+            rect.sizeDelta = new Vector2(92f, Mathf.Max(rect.sizeDelta.y, 34f));
+
+        textOffset.textWrappingMode = TextWrappingModes.NoWrap;
+        textOffset.overflowMode = TextOverflowModes.Overflow;
+        textOffset.alignment = TextAlignmentOptions.Center;
+        textOffset.enableAutoSizing = true;
+        textOffset.fontSizeMin = 16f;
+        textOffset.fontSizeMax = Mathf.Max(textOffset.fontSize, 24f);
+    }
+
+    private void BuildNoteSpeedPreview()
+    {
+        if (contentGameplay == null)
+            return;
+
+        Transform old = contentGameplay.transform.Find("RG Note Speed Preview");
+        if (old != null)
+        {
+            noteSpeedPreviewMarker = old.Find("Marker") as RectTransform;
+            noteSpeedPreviewValue = old.GetComponentInChildren<TextMeshProUGUI>(true);
+            return;
+        }
+
+        RectTransform root = CreateUiRect("RG Note Speed Preview", contentGameplay.transform);
+        root.anchorMin = new Vector2(0.5f, 0.5f);
+        root.anchorMax = new Vector2(0.5f, 0.5f);
+        root.pivot = new Vector2(0.5f, 0.5f);
+        root.anchoredPosition = new Vector2(0f, -215f);
+        root.sizeDelta = new Vector2(260f, 72f);
+
+        Image bg = root.gameObject.AddComponent<Image>();
+        bg.color = new Color(0.06f, 0.04f, 0.10f, 0.60f);
+        bg.raycastTarget = false;
+
+        TextMeshProUGUI title = CreateUiText("NOTE SPEED PREVIEW", root, new Vector2(0f, 22f), new Vector2(230f, 22f), 13f, FontStyles.Bold);
+        title.color = new Color(1f, 1f, 1f, 0.82f);
+
+        RectTransform rail = CreateUiRect("Rail", root);
+        rail.anchorMin = rail.anchorMax = new Vector2(0.5f, 0.5f);
+        rail.pivot = new Vector2(0.5f, 0.5f);
+        rail.anchoredPosition = new Vector2(0f, -3f);
+        rail.sizeDelta = new Vector2(190f, 5f);
+        Image railImage = rail.gameObject.AddComponent<Image>();
+        railImage.color = new Color(1f, 1f, 1f, 0.18f);
+        railImage.raycastTarget = false;
+
+        noteSpeedPreviewMarker = CreateUiRect("Marker", rail);
+        noteSpeedPreviewMarker.anchorMin = noteSpeedPreviewMarker.anchorMax = new Vector2(0.5f, 0.5f);
+        noteSpeedPreviewMarker.pivot = new Vector2(0.5f, 0.5f);
+        noteSpeedPreviewMarker.sizeDelta = new Vector2(14f, 14f);
+        Image markerImage = noteSpeedPreviewMarker.gameObject.AddComponent<Image>();
+        markerImage.color = new Color(0.70f, 1f, 1f, 0.95f);
+        markerImage.raycastTarget = false;
+
+        noteSpeedPreviewValue = CreateUiText("1.0x", root, new Vector2(0f, -26f), new Vector2(120f, 20f), 13f, FontStyles.Bold);
+        noteSpeedPreviewValue.color = Color.white;
+        UpdateNoteSpeedPreview();
+    }
+
+    private void UpdateNoteSpeedPreview()
+    {
+        if (noteSpeedPreviewValue != null)
+            noteSpeedPreviewValue.text = RuntimeGameplaySettings.NoteSpeedMultiplier.ToString("0.0") + "x";
+
+        if (noteSpeedPreviewMarker != null)
+        {
+            float phase = Mathf.Repeat(Time.unscaledTime * RuntimeGameplaySettings.NoteSpeedMultiplier * 0.55f, 1f);
+            noteSpeedPreviewMarker.anchoredPosition = new Vector2(Mathf.Lerp(-92f, 92f, phase), 0f);
+        }
+    }
+
+    private static RectTransform CreateUiRect(string objectName, Transform parent)
+    {
+        GameObject obj = new GameObject(objectName, typeof(RectTransform));
+        RectTransform rect = obj.GetComponent<RectTransform>();
+        rect.SetParent(parent, false);
+        return rect;
+    }
+
+    private static TextMeshProUGUI CreateUiText(string text, Transform parent, Vector2 position, Vector2 size, float fontSize, FontStyles fontStyle)
+    {
+        RectTransform rect = CreateUiRect("Text - " + text, parent);
+        rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.anchoredPosition = position;
+        rect.sizeDelta = size;
+
+        TextMeshProUGUI label = rect.gameObject.AddComponent<TextMeshProUGUI>();
+        label.text = text;
+        label.fontSize = fontSize;
+        label.fontStyle = fontStyle;
+        label.alignment = TextAlignmentOptions.Center;
+        label.textWrappingMode = TextWrappingModes.NoWrap;
+        label.overflowMode = TextOverflowModes.Overflow;
+        label.raycastTarget = false;
+        TmpRuntimeFontFallback.Apply(label);
+        return label;
+    }
+
+    public void PauseGame()
+    {
         if (isCountingDown) return;
-        
+
         if (pausePopup != null)
         {
-            pausePopup.SetActive(true); 
+            pausePopup.SetActive(true);
             pausePopup.transform.SetAsLastSibling();
         }
-        
+
         if (countdownText != null) countdownText.gameObject.SetActive(false);
-        Time.timeScale = 0f; 
+        Time.timeScale = 0f;
         if (RhythmTimeManager.Instance != null) RhythmTimeManager.Instance.PauseGame();
     }
-    
-    public void ResumeGame() 
-    { 
+
+    public void ResumeGame()
+    {
         if (!pausePopup.activeSelf || isCountingDown) return;
-        StartCoroutine(ResumeCountdownCoroutine()); 
+        StartCoroutine(ResumeCountdownCoroutine());
     }
 
     private IEnumerator ResumeCountdownCoroutine()
     {
         isCountingDown = true;
-        
+
         // Ẩn menu Pause ngay lập tức
         if (pausePopup != null) pausePopup.SetActive(false);
 
@@ -289,29 +403,29 @@ public class UIManager : MonoBehaviour
             yield return new WaitForSecondsRealtime(1f);
         }
 
-        Time.timeScale = 1f; 
+        Time.timeScale = 1f;
         isCountingDown = false;
-        
+
         if (RhythmTimeManager.Instance != null) RhythmTimeManager.Instance.ResumeGame();
     }
 
-    public void RetryGame() 
-    { 
+    public void RetryGame()
+    {
         isCountingDown = false;
         StopAllCoroutines();
-        
-        if (GameManager.Instance != null) 
+
+        if (GameManager.Instance != null)
             GameManager.Instance.RetryGame();
         else
             Debug.LogError("[UIManager] GameManager.Instance is null! Cannot retry.");
     }
-    
-    public void QuitToLobby() 
-    { 
+
+    public void QuitToLobby()
+    {
         isCountingDown = false;
         StopAllCoroutines();
-        
-        if (GameManager.Instance != null) 
+
+        if (GameManager.Instance != null)
             GameManager.Instance.QuitToLobby();
         else
             Debug.LogError("[UIManager] GameManager.Instance is null! Cannot quit.");

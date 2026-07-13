@@ -5,13 +5,13 @@ using UnityEngine;
 /// <summary>
 /// Hiển thị combo lên HUD.
 /// Chỉ chịu trách nhiệm hiển thị — mọi logic combo nằm ở ComboManager.
-/// 
+///
 /// Setup trong Inspector:
 /// 1. Kéo ComboManager vào trường _comboManager.
 /// 2. Kéo TMP text đã tạo sẵn trên Canvas vào _labelText và _numberText.
 /// 3. Tuỳ chỉnh font, size, màu, position trực tiếp trên các TMP component.
 /// 4. Tuỳ chỉnh animation trong Inspector (punchScale, duration, ...).
-/// 
+///
 /// Khi combo break → UI fade out (chỉ hiện khoảng trống).
 /// Khi combo tăng lại → UI fade in + punch scale.
 /// </summary>
@@ -84,6 +84,31 @@ public class ComboDisplay : MonoBehaviour
     private Coroutine _milestoneColorCoroutine;
 
     private bool _isVisible;
+    private bool _isSubscribed;
+
+    public void BindRuntimeReferences(
+        ComboManager comboManager,
+        TextMeshProUGUI labelText,
+        TextMeshProUGUI numberText,
+        CanvasGroup canvasGroup)
+    {
+        if (_isSubscribed && _comboManager != null)
+        {
+            _comboManager.OnComboChanged -= HandleComboChanged;
+            _comboManager.OnComboMilestone -= HandleMilestone;
+            _isSubscribed = false;
+        }
+
+        _comboManager = comboManager;
+        _labelText = labelText;
+        _numberText = numberText;
+        _canvasGroup = canvasGroup;
+
+        CacheScaleTarget();
+        DisableRaycasts();
+        HideImmediate();
+        EnsureSubscribed();
+    }
 
     // ──────────────────────────────────────
     // Lifecycle
@@ -91,25 +116,32 @@ public class ComboDisplay : MonoBehaviour
 
     private void Awake()
     {
+        ResolveReferences();
         CacheScaleTarget();
+        DisableRaycasts();
         HideImmediate();
     }
 
     private void OnEnable()
     {
-        if (_comboManager != null)
-        {
-            _comboManager.OnComboChanged += HandleComboChanged;
-            _comboManager.OnComboMilestone += HandleMilestone;
-        }
+        EnsureSubscribed();
+    }
+
+    private void Start()
+    {
+        ResolveReferences();
+        CacheScaleTarget();
+        DisableRaycasts();
+        EnsureSubscribed();
     }
 
     private void OnDisable()
     {
-        if (_comboManager != null)
+        if (_comboManager != null && _isSubscribed)
         {
             _comboManager.OnComboChanged -= HandleComboChanged;
             _comboManager.OnComboMilestone -= HandleMilestone;
+            _isSubscribed = false;
         }
     }
 
@@ -127,6 +159,7 @@ public class ComboDisplay : MonoBehaviour
 
         UpdateNumberText(data.CurrentCombo);
         SetTextColor(_normalColor);
+        BringToFront();
 
         if (!_isVisible)
         {
@@ -138,6 +171,7 @@ public class ComboDisplay : MonoBehaviour
 
     private void HandleMilestone(int combo)
     {
+        BringToFront();
         SetTextColor(_milestoneColor);
 
         PlayPunchScale(_milestonePunchScale, _milestonePunchDuration);
@@ -295,6 +329,68 @@ public class ComboDisplay : MonoBehaviour
         {
             _scaleTarget = GetComponent<RectTransform>();
         }
+    }
+
+    private void ResolveReferences()
+    {
+        if (_comboManager == null)
+            _comboManager = FindFirstObjectByType<ComboManager>();
+
+        if (_canvasGroup == null)
+            _canvasGroup = GetComponent<CanvasGroup>();
+
+        if (_labelText == null || _numberText == null)
+        {
+            TextMeshProUGUI[] texts = GetComponentsInChildren<TextMeshProUGUI>(true);
+            foreach (TextMeshProUGUI text in texts)
+            {
+                if (text == null)
+                    continue;
+
+                string lowerName = text.name.ToLowerInvariant();
+                if (_labelText == null && lowerName.Contains("label"))
+                    _labelText = text;
+                else if (_numberText == null && lowerName.Contains("number"))
+                    _numberText = text;
+            }
+        }
+    }
+
+    private void EnsureSubscribed()
+    {
+        if (_isSubscribed)
+            return;
+
+        ResolveReferences();
+
+        if (_comboManager == null)
+            return;
+
+        _comboManager.OnComboChanged += HandleComboChanged;
+        _comboManager.OnComboMilestone += HandleMilestone;
+        _isSubscribed = true;
+    }
+
+    private void DisableRaycasts()
+    {
+        if (_canvasGroup != null)
+        {
+            _canvasGroup.interactable = false;
+            _canvasGroup.blocksRaycasts = false;
+        }
+
+        if (_labelText != null)
+            _labelText.raycastTarget = false;
+
+        if (_numberText != null)
+            _numberText.raycastTarget = false;
+    }
+
+    private void BringToFront()
+    {
+        RectTransform rect = _scaleTarget != null ? _scaleTarget : GetComponent<RectTransform>();
+        if (rect != null)
+            rect.SetAsLastSibling();
     }
 
     private static float EaseOutQuad(float t)

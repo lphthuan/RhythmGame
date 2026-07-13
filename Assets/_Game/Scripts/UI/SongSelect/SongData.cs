@@ -114,7 +114,7 @@ public class SongData : ScriptableObject
         foreach (char c in input.ToLower())
         {
             if (char.IsLetterOrDigit(c))   sb.Append(c);
-            else if (c == ' ' || c == '-') sb.Append('_');
+            else if (c == ' ' || c == '-' || c == '_') sb.Append('_');
             // Bỏ qua các ký tự khác: (, ), +, ., !, ...
         }
 

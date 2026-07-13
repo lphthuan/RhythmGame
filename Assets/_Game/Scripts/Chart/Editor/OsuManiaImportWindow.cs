@@ -36,11 +36,20 @@ public class SongImportWindow : EditorWindow
     private bool mp3AutoDetectBpm = true;
     private float mp3Bpm = 120f;
     private float mp3ChartOffsetSeconds;
+    private float mp3FirstBeatSeconds;
     private int mp3LaneCount = 4;
+    private float mp3EasyDensity = 0.38f;
+    private float mp3NormalDensity = 0.58f;
+    private float mp3HardDensity = 0.78f;
+    private float mp3HoldRatio = 0.08f;
+    private float mp3FlickRatio = 0.05f;
     private bool mp3CreateTimelineAsset = true;
     private bool mp3CreateOrUpdateSongData = true;
     private bool mp3PreviewInOpenTool = true;
     private bool mp3PrepareRuntimeSpawner = true;
+    private ChartData mp3PreviewChart;
+    private GeneratedChartPreview mp3PreviewSummary;
+    private Difficulty mp3PreviewDifficulty = Difficulty.Medium;
 
     [MenuItem("Tools/RhythmGame/Song Import")]
     public static void Open()
@@ -122,7 +131,17 @@ public class SongImportWindow : EditorWindow
         using (new EditorGUI.DisabledScope(mp3AutoDetectBpm))
             mp3Bpm = EditorGUILayout.FloatField("BPM", mp3Bpm);
         mp3ChartOffsetSeconds = EditorGUILayout.FloatField("Chart Offset Seconds", mp3ChartOffsetSeconds);
+        mp3FirstBeatSeconds = Mathf.Max(0f, EditorGUILayout.FloatField("First Beat Seconds", mp3FirstBeatSeconds));
         mp3LaneCount = Mathf.Clamp(EditorGUILayout.IntField("Lane Count", mp3LaneCount), 1, 8);
+        EditorGUILayout.Space(4f);
+        EditorGUILayout.LabelField("Density", EditorStyles.boldLabel);
+        mp3EasyDensity = EditorGUILayout.Slider("Easy Density", mp3EasyDensity, 0.05f, 1f);
+        mp3NormalDensity = EditorGUILayout.Slider("Normal Density", mp3NormalDensity, 0.05f, 1f);
+        mp3HardDensity = EditorGUILayout.Slider("Hard Density", mp3HardDensity, 0.05f, 1f);
+        EditorGUILayout.Space(4f);
+        EditorGUILayout.LabelField("Note Type Ratio", EditorStyles.boldLabel);
+        mp3HoldRatio = EditorGUILayout.Slider("Hold Ratio", mp3HoldRatio, 0f, 0.45f);
+        mp3FlickRatio = EditorGUILayout.Slider("Flick Ratio", mp3FlickRatio, 0f, 0.35f);
         mp3CreateTimelineAsset = EditorGUILayout.Toggle("Create Timeline Asset", mp3CreateTimelineAsset);
         mp3CreateOrUpdateSongData = EditorGUILayout.Toggle("Create/Update SongData Hub", mp3CreateOrUpdateSongData);
         mp3PreviewInOpenTool = EditorGUILayout.Toggle("Preview In Open Tool", mp3PreviewInOpenTool);
@@ -130,6 +149,15 @@ public class SongImportWindow : EditorWindow
 
         using (new EditorGUI.DisabledScope(string.IsNullOrWhiteSpace(mp3FilePath)))
         {
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                mp3PreviewDifficulty = (Difficulty)EditorGUILayout.EnumPopup("Preview Difficulty", mp3PreviewDifficulty);
+                if (GUILayout.Button("Preview Chart", GUILayout.Width(120f)))
+                    PreviewMp3AutoChart();
+            }
+
+            DrawMp3Preview();
+
             if (GUILayout.Button("Generate From MP3", GUILayout.Height(30f)))
                 ImportMp3AutoChart();
         }
@@ -251,13 +279,18 @@ public class SongImportWindow : EditorWindow
             ChartDifficultyPreset preset = ToGeneratorPreset(difficulty);
             string difficultyName = GetDifficultyFileSuffix(difficulty);
             string generatedChartFileName = "chart_" + SongData.SanitizeForFileName(groupId) + "_" + difficultyName;
-            ChartData chart = SimpleChartGenerator.Generate(
+            ChartData chart = AudioOnsetChartGenerator.Generate(
                 title,
+                clip,
                 bpm,
-                clip.length,
                 mp3ChartOffsetSeconds,
+                mp3FirstBeatSeconds,
                 mp3LaneCount,
-                preset);
+                preset,
+                GetMp3Density(difficulty),
+                mp3HoldRatio,
+                mp3FlickRatio,
+                out GeneratedChartPreview preview);
 
             ChartSaveLoad.Save(chart, generatedChartFileName);
             RhythmTimelineAsset timeline = mp3CreateTimelineAsset
@@ -281,6 +314,9 @@ public class SongImportWindow : EditorWindow
             lastChart = chart;
             lastChartName = generatedChartFileName;
             totalNotes += chart.notes.Count;
+            mp3PreviewChart = chart;
+            mp3PreviewSummary = preview;
+            mp3PreviewDifficulty = difficulty;
         }
 
         if (lastChart != null)
@@ -298,6 +334,77 @@ public class SongImportWindow : EditorWindow
 
         Debug.Log($"SongImportWindow mp3: {message.Replace("\n", " | ")}");
         EditorUtility.DisplayDialog("MP3 Auto Chart Complete", message, "OK");
+    }
+
+    private void PreviewMp3AutoChart()
+    {
+        if (!File.Exists(mp3FilePath))
+        {
+            EditorUtility.DisplayDialog("Preview Failed", "Selected MP3 file does not exist.", "OK");
+            return;
+        }
+
+        AudioClip clip = ImportAudioFile(mp3FilePath);
+        if (clip == null)
+        {
+            EditorUtility.DisplayDialog("Preview Failed", "MP3 was copied but Unity could not load it as AudioClip.", "OK");
+            return;
+        }
+
+        float bpm = mp3AutoDetectBpm ? BpmDetector.Detect(clip) : Mathf.Max(1f, mp3Bpm);
+        mp3Bpm = bpm;
+
+        string title = string.IsNullOrWhiteSpace(mp3SongTitle)
+            ? Path.GetFileNameWithoutExtension(mp3FilePath)
+            : mp3SongTitle.Trim();
+
+        ChartDifficultyPreset preset = ToGeneratorPreset(mp3PreviewDifficulty);
+        mp3PreviewChart = AudioOnsetChartGenerator.Generate(
+            title,
+            clip,
+            bpm,
+            mp3ChartOffsetSeconds,
+            mp3FirstBeatSeconds,
+            mp3LaneCount,
+            preset,
+            GetMp3Density(mp3PreviewDifficulty),
+            mp3HoldRatio,
+            mp3FlickRatio,
+            out mp3PreviewSummary);
+
+        SyncOpenScene(mp3PreviewChart, clip, "preview_mp3_auto_chart", preview: true, prepareSpawner: false);
+    }
+
+    private void DrawMp3Preview()
+    {
+        if (mp3PreviewChart == null)
+            return;
+
+        EditorGUILayout.Space(6f);
+        EditorGUILayout.HelpBox(
+            $"Preview {mp3PreviewDifficulty}: {mp3PreviewSummary.NoteCount} notes | " +
+            $"Tap {mp3PreviewSummary.TapCount}, Hold {mp3PreviewSummary.HoldCount}, Flick {mp3PreviewSummary.FlickCount} | " +
+            $"Onset avg {mp3PreviewSummary.AverageOnset:0.00}, max {mp3PreviewSummary.StrongestOnset:0.00}",
+            MessageType.None);
+
+        Rect rect = GUILayoutUtility.GetRect(1f, 64f, GUILayout.ExpandWidth(true));
+        EditorGUI.DrawRect(rect, new Color(0.07f, 0.05f, 0.10f, 1f));
+        if (mp3PreviewChart.notes == null || mp3PreviewChart.notes.Count == 0)
+            return;
+
+        float length = Mathf.Max(1f, mp3PreviewChart.notes[mp3PreviewChart.notes.Count - 1].time);
+        foreach (NoteData note in mp3PreviewChart.notes)
+        {
+            float x = rect.x + Mathf.Clamp01(note.time / length) * rect.width;
+            float laneHeight = rect.height / Mathf.Max(1, mp3PreviewChart.laneCount);
+            float y = rect.yMax - (Mathf.Clamp(note.lane, 0, mp3PreviewChart.laneCount - 1) + 1) * laneHeight;
+            Color color = note.type == NoteType.Hold
+                ? new Color(0.28f, 0.78f, 1f, 1f)
+                : note.type == NoteType.Flick
+                    ? new Color(1f, 0.45f, 0.75f, 1f)
+                    : new Color(1f, 0.88f, 0.30f, 1f);
+            EditorGUI.DrawRect(new Rect(x, y + 2f, 2f, Mathf.Max(2f, laneHeight - 4f)), color);
+        }
     }
 
     private static string BuildChartFileName(OsuManiaBeatmapParser.ImportResult result)
@@ -327,7 +434,10 @@ public class SongImportWindow : EditorWindow
 
         string extension = Path.GetExtension(sourcePath);
         string safeName = SongData.SanitizeForFileName(Path.GetFileNameWithoutExtension(sourcePath));
-        string targetPath = AssetDatabase.GenerateUniqueAssetPath($"{MusicFolder}/{safeName}{extension}");
+        string targetPath = $"{MusicFolder}/{safeName}{extension}";
+        AudioClip existing = AssetDatabase.LoadAssetAtPath<AudioClip>(targetPath);
+        if (existing != null)
+            return existing;
 
         File.Copy(sourcePath, targetPath, overwrite: false);
         AssetDatabase.ImportAsset(targetPath, ImportAssetOptions.ForceSynchronousImport);
@@ -499,6 +609,16 @@ public class SongImportWindow : EditorWindow
             Difficulty.Easy => ChartDifficultyPreset.Easy,
             Difficulty.Hard => ChartDifficultyPreset.Hard,
             _ => ChartDifficultyPreset.Normal
+        };
+    }
+
+    private float GetMp3Density(Difficulty difficulty)
+    {
+        return difficulty switch
+        {
+            Difficulty.Easy => mp3EasyDensity,
+            Difficulty.Hard => mp3HardDensity,
+            _ => mp3NormalDensity
         };
     }
 

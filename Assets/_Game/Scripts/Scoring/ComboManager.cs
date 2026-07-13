@@ -16,6 +16,7 @@ public class ComboManager : MonoBehaviour
 
     private int _currentCombo;
     private int _maxCombo;
+    private bool _isSubscribed;
 
     /// <summary>Combo hiện tại.</summary>
     public int CurrentCombo => _currentCombo;
@@ -47,18 +48,32 @@ public class ComboManager : MonoBehaviour
 
     private void OnEnable()
     {
-        if (_noteManager != null)
-        {
-            _noteManager.OnNoteFinishedEvent += HandleNoteResult;
-        }
+        EnsureSubscribed();
+    }
+
+    private void Start()
+    {
+        EnsureSubscribed();
     }
 
     private void OnDisable()
     {
-        if (_noteManager != null)
-        {
-            _noteManager.OnNoteFinishedEvent -= HandleNoteResult;
-        }
+        Unsubscribe();
+    }
+
+    public void BindNoteManager(NoteManager noteManager)
+    {
+        if (_noteManager == noteManager && _isSubscribed)
+            return;
+
+        Unsubscribe();
+        _noteManager = noteManager;
+        EnsureSubscribed();
+    }
+
+    public void BindConfig(ComboConfig config)
+    {
+        _config = config;
     }
 
     /// <summary>
@@ -85,6 +100,30 @@ public class ComboManager : MonoBehaviour
         else
         {
             IncrementCombo();
+        }
+    }
+
+    private void EnsureSubscribed()
+    {
+        if (_isSubscribed)
+            return;
+
+        if (_noteManager == null)
+            _noteManager = FindFirstObjectByType<NoteManager>();
+
+        if (_noteManager == null)
+            return;
+
+        _noteManager.OnNoteFinishedEvent += HandleNoteResult;
+        _isSubscribed = true;
+    }
+
+    private void Unsubscribe()
+    {
+        if (_noteManager != null && _isSubscribed)
+        {
+            _noteManager.OnNoteFinishedEvent -= HandleNoteResult;
+            _isSubscribed = false;
         }
     }
 

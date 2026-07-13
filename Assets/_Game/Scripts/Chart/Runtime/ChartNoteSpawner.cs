@@ -1,6 +1,11 @@
 using System.Collections.Generic;
+using Dypsloom.RhythmTimeline.Core;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 #if ENABLE_INPUT_SYSTEM
 using Keyboard = UnityEngine.InputSystem.Keyboard;
 #endif
@@ -63,6 +68,9 @@ public class ChartNoteSpawner : MonoBehaviour
 
     [SerializeField] private bool logSpawnedNotes = false;
 
+    [Header("Runtime UI")]
+    [SerializeField] private Vector2 comboDisplayPosition = new Vector2(0f, -180f);
+
     [Header("Edit Mode")]
     [Tooltip("Bật khi muốn chỉnh chart bằng tay (Load Preview → Play → kéo note → Save).\n" +
              "Khi ON: không spawn runtime notes, không tắt Note Parent preview.\n" +
@@ -82,6 +90,8 @@ public class ChartNoteSpawner : MonoBehaviour
     private bool _listeningToNoteManager;
 
     public event System.Action OnChartFinished;
+    public int TotalNoteCount => _spawnDataList != null ? _spawnDataList.Count : 0;
+    public bool IsReady => _isReady;
 
     /// <summary>
     /// Đồng bộ chartFileName với SongData được chọn từ Editor dropdown.
@@ -105,6 +115,7 @@ public class ChartNoteSpawner : MonoBehaviour
     {
         LoadPersistedScrollSpeed();
         GameplaySongBackdrop.Apply();
+        EnsureGameplayUi();
 
         // ─── EDIT MODE: chỉ xem preview, không spawn runtime notes ───────────
         if (editMode)
@@ -185,8 +196,13 @@ public class ChartNoteSpawner : MonoBehaviour
             }
         }
 
-        if (!ChartSpawnDataProvider.TryGetChartAndSpawnData(
+        RhythmTimelineAsset timelineToLoad = selectedSong != null
+            ? selectedSong.GetTimelineAsset(selectedDifficulty)
+            : null;
+
+        if (!TryLoadSelectedChart(
                 fileToLoad,
+                timelineToLoad,
                 out ChartData loadedChart,
                 out _spawnDataList))
         {
@@ -214,6 +230,37 @@ public class ChartNoteSpawner : MonoBehaviour
         _isReady = true;
 
         Debug.Log($"ChartNoteSpawner ready. Notes to spawn: {_spawnDataList.Count}");
+    }
+
+    private static bool TryLoadSelectedChart(
+        string chartFileNameToLoad,
+        RhythmTimelineAsset timelineToLoad,
+        out ChartData loadedChart,
+        out List<ChartNoteSpawnData> spawnDataList)
+    {
+        if (!string.IsNullOrWhiteSpace(chartFileNameToLoad) &&
+            ChartSpawnDataProvider.TryGetChartAndSpawnData(
+                chartFileNameToLoad,
+                out loadedChart,
+                out spawnDataList))
+        {
+            return true;
+        }
+
+        if (timelineToLoad != null &&
+            ChartSpawnDataProvider.TryGetChartAndSpawnData(
+                timelineToLoad,
+                out loadedChart,
+                out spawnDataList))
+        {
+            Debug.LogWarning(
+                $"ChartNoteSpawner: JSON chart '{chartFileNameToLoad}' was not found. Loaded committed timeline asset '{timelineToLoad.name}' instead.");
+            return true;
+        }
+
+        loadedChart = null;
+        spawnDataList = new List<ChartNoteSpawnData>();
+        return false;
     }
 
     private void Update()
@@ -531,6 +578,230 @@ public class ChartNoteSpawner : MonoBehaviour
 
         if (logScrollSpeedChanges)
             Debug.Log($"ChartNoteSpawner: Loaded scroll speed = {scrollSpeed:F0}");
+    }
+
+    private void EnsureGameplayUi()
+    {
+        if (GameObject.Find("RG Runtime Hit Effect Receiver") == null)
+            new GameObject("RG Runtime Hit Effect Receiver").AddComponent<HitEffectSpriteReceiver>();
+
+        ComboManager runtimeComboManager = EnsureRuntimeComboManager();
+
+        EnsureRuntimeComboDisplay(runtimeComboManager);
+
+        if (FindFirstObjectByType<GameplayHudController>() == null)
+            new GameObject("RG Gameplay HUD Controller").AddComponent<GameplayHudController>();
+
+        if (FindFirstObjectByType<GameplayPauseController>() == null)
+            new GameObject("RG Gameplay Pause Controller").AddComponent<GameplayPauseController>();
+    }
+
+    private ComboManager EnsureRuntimeComboManager()
+    {
+        GameObject managerObject = GameObject.Find("RG Runtime Combo Manager");
+        ComboManager comboManager = managerObject != null
+            ? managerObject.GetComponent<ComboManager>()
+            : null;
+
+        if (comboManager == null)
+        {
+            managerObject = new GameObject("RG Runtime Combo Manager");
+            comboManager = managerObject.AddComponent<ComboManager>();
+        }
+
+        comboManager.BindNoteManager(noteManager != null ? noteManager : FindFirstObjectByType<NoteManager>());
+        comboManager.BindConfig(LoadRuntimeComboConfig());
+        return comboManager;
+    }
+
+    private void EnsureRuntimeComboDisplay(ComboManager comboManager)
+    {
+        Canvas canvas = FindFirstObjectByType<Canvas>();
+        if (canvas == null || comboManager == null)
+            return;
+
+        ComboDisplay sceneDisplay = FindExistingComboDisplay();
+        if (sceneDisplay != null)
+        {
+            BindExistingComboDisplay(sceneDisplay, comboManager, comboDisplayPosition);
+            return;
+        }
+
+        if (TryCreateComboDisplayFromPrefab(canvas, comboManager, comboDisplayPosition))
+            return;
+
+        CreateSimpleRuntimeComboDisplay(canvas, comboManager, comboDisplayPosition);
+    }
+
+    private static ComboDisplay FindExistingComboDisplay()
+    {
+        ComboDisplay[] displays = FindObjectsByType<ComboDisplay>(
+            FindObjectsInactive.Include,
+            FindObjectsSortMode.None);
+
+        foreach (ComboDisplay display in displays)
+        {
+            if (display == null)
+                continue;
+
+            if (display.name == "RG Combo Runtime Display")
+                continue;
+
+            return display;
+        }
+
+        return null;
+    }
+
+    private static void BindExistingComboDisplay(ComboDisplay display, ComboManager comboManager, Vector2 anchoredPosition)
+    {
+        if (display == null || comboManager == null)
+            return;
+
+        CanvasGroup canvasGroup = display.GetComponent<CanvasGroup>();
+        TextMeshProUGUI labelText = FindChildText(display.transform, "Combo_Label");
+        TextMeshProUGUI numberText = FindChildText(display.transform, "Combo_Number");
+        display.BindRuntimeReferences(comboManager, labelText, numberText, canvasGroup);
+
+        RectTransform rect = display.GetComponent<RectTransform>();
+        if (rect != null)
+        {
+            rect.anchoredPosition = anchoredPosition;
+            rect.SetAsLastSibling();
+        }
+
+        display.gameObject.SetActive(true);
+    }
+
+    private static ComboConfig LoadRuntimeComboConfig()
+    {
+#if UNITY_EDITOR
+        return AssetDatabase.LoadAssetAtPath<ComboConfig>("Assets/_Game/Data/Combo/ComboConfig.asset");
+#else
+        return null;
+#endif
+    }
+
+    private static bool TryCreateComboDisplayFromPrefab(Canvas canvas, ComboManager comboManager, Vector2 anchoredPosition)
+    {
+#if UNITY_EDITOR
+        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/_Game/Prefabs/Core/UI/ComboDisplay_Root.prefab");
+        if (prefab == null)
+            return false;
+
+        GameObject rootObject = Instantiate(prefab, canvas.transform, false);
+        rootObject.name = "RG Combo Runtime Display";
+        rootObject.transform.SetAsLastSibling();
+
+        RectTransform rect = rootObject.GetComponent<RectTransform>();
+        if (rect != null)
+        {
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = anchoredPosition;
+        }
+
+        ComboDisplay display = rootObject.GetComponent<ComboDisplay>();
+        CanvasGroup canvasGroup = rootObject.GetComponent<CanvasGroup>();
+        TextMeshProUGUI labelText = FindChildText(rootObject.transform, "Combo_Label");
+        TextMeshProUGUI numberText = FindChildText(rootObject.transform, "Combo_Number");
+
+        if (display != null)
+            display.BindRuntimeReferences(comboManager, labelText, numberText, canvasGroup);
+
+        return display != null;
+#else
+        return false;
+#endif
+    }
+
+    private static TextMeshProUGUI FindChildText(Transform root, string childName)
+    {
+        TextMeshProUGUI[] texts = root.GetComponentsInChildren<TextMeshProUGUI>(true);
+        foreach (TextMeshProUGUI text in texts)
+        {
+            if (text != null && text.name == childName)
+                return text;
+        }
+
+        return null;
+    }
+
+    private void CreateSimpleRuntimeComboDisplay(Canvas canvas, ComboManager comboManager, Vector2 anchoredPosition)
+    {
+        GameObject rootObject = new GameObject(
+            "RG Combo Runtime Display",
+            typeof(RectTransform),
+            typeof(CanvasGroup),
+            typeof(VerticalLayoutGroup)
+        );
+        rootObject.SetActive(false);
+        rootObject.transform.SetParent(canvas.transform, false);
+        rootObject.transform.SetAsLastSibling();
+
+        RectTransform rect = rootObject.GetComponent<RectTransform>();
+        rect.anchorMin = new Vector2(0.5f, 0.5f);
+        rect.anchorMax = new Vector2(0.5f, 0.5f);
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.sizeDelta = new Vector2(280f, 150f);
+        rect.anchoredPosition = anchoredPosition;
+
+        CanvasGroup canvasGroup = rootObject.GetComponent<CanvasGroup>();
+        canvasGroup.interactable = false;
+        canvasGroup.blocksRaycasts = false;
+
+        VerticalLayoutGroup layout = rootObject.GetComponent<VerticalLayoutGroup>();
+        layout.childAlignment = TextAnchor.MiddleCenter;
+        layout.childControlHeight = true;
+        layout.childControlWidth = true;
+        layout.childForceExpandHeight = false;
+        layout.childForceExpandWidth = true;
+        layout.spacing = -6f;
+
+        TextMeshProUGUI labelText = CreateRuntimeComboText(rootObject.transform, "Combo Label", "COMBO", 24, 44f);
+        labelText.alpha = 0.75f;
+        labelText.characterSpacing = 10f;
+
+        TextMeshProUGUI numberText = CreateRuntimeComboText(rootObject.transform, "Combo Number", "0", 72, 96f);
+
+        ComboDisplay display = rootObject.AddComponent<ComboDisplay>();
+        display.BindRuntimeReferences(comboManager, labelText, numberText, canvasGroup);
+
+        rootObject.SetActive(true);
+    }
+
+    private static TextMeshProUGUI CreateRuntimeComboText(
+        Transform parent,
+        string objectName,
+        string text,
+        int fontSize,
+        float preferredHeight)
+    {
+        GameObject textObject = new GameObject(
+            objectName,
+            typeof(RectTransform),
+            typeof(TextMeshProUGUI),
+            typeof(LayoutElement)
+        );
+        textObject.transform.SetParent(parent, false);
+
+        RectTransform rect = textObject.GetComponent<RectTransform>();
+        rect.sizeDelta = new Vector2(280f, preferredHeight);
+
+        LayoutElement layoutElement = textObject.GetComponent<LayoutElement>();
+        layoutElement.preferredHeight = preferredHeight;
+
+        TextMeshProUGUI tmp = textObject.GetComponent<TextMeshProUGUI>();
+        tmp.text = text;
+        tmp.fontSize = fontSize;
+        tmp.fontStyle = FontStyles.Bold;
+        tmp.alignment = TextAlignmentOptions.Center;
+        tmp.color = Color.white;
+        tmp.raycastTarget = false;
+        tmp.textWrappingMode = TextWrappingModes.NoWrap;
+        tmp.overflowMode = TextOverflowModes.Overflow;
+        return tmp;
     }
 
     private void SavePersistedScrollSpeed()

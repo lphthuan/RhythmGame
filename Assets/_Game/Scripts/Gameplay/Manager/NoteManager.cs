@@ -141,6 +141,15 @@ public class NoteManager : MonoBehaviour
 
         resultReceiver?.OnNoteFinished(note, result);
         OnNoteFinishedEvent?.Invoke(note, result);
+
+        HitEffectSpriteReceiver receiver = HitEffectSpriteReceiver.ActiveReceiver;
+        if (receiver != null && !receiver.IsSubscribed &&
+            (result == NoteResult.Missed ||
+             result == NoteResult.Failed ||
+             result == NoteResult.ReleasedEarly))
+        {
+            receiver.ShowMissEffect(note);
+        }
     }
     public void NotifyJudgmentEffect(NoteBase note)
     {
@@ -156,6 +165,10 @@ public class NoteManager : MonoBehaviour
             note.LastJudgment,
             note.LastDeltaMs
         );
+
+        HitEffectSpriteReceiver receiver = HitEffectSpriteReceiver.ActiveReceiver;
+        if (receiver != null && !receiver.IsSubscribed)
+            receiver.ShowJudgmentEffect(note, note.LastJudgment);
     }
 
     public void NotifySustainEffect(NoteBase note)

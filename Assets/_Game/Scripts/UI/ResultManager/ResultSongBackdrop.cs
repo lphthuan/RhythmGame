@@ -6,12 +6,18 @@ public static class ResultSongBackdrop
 {
     public static void Apply(GameObject overlay)
     {
+        Apply(overlay, default);
+    }
+
+    public static void Apply(GameObject overlay, GameplayResultData result)
+    {
         SongData song = SelectedSongManager.Instance != null ? SelectedSongManager.Instance.SelectedSong : null;
         if (overlay == null)
             return;
 
         RepairLayout(overlay.transform);
         ApplySongInfo(overlay.transform, song);
+        ApplyClearStatus(overlay.transform, result);
 
         if (song == null || song.PreviewImage == null)
             return;
@@ -26,19 +32,51 @@ public static class ResultSongBackdrop
         }
     }
 
+    private static void ApplyClearStatus(Transform overlay, GameplayResultData result)
+    {
+        RectTransform statusRect = FindRect(overlay, "RG Clear Status");
+        TextMeshProUGUI statusText;
+        if (statusRect == null)
+        {
+            GameObject obj = new GameObject("RG Clear Status", typeof(RectTransform));
+            statusRect = obj.GetComponent<RectTransform>();
+            statusRect.SetParent(overlay, false);
+            statusText = obj.AddComponent<TextMeshProUGUI>();
+        }
+        else
+        {
+            statusText = statusRect.GetComponent<TextMeshProUGUI>();
+            if (statusText == null)
+                statusText = statusRect.gameObject.AddComponent<TextMeshProUGUI>();
+        }
+
+        SetRect(statusRect, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 86f), new Vector2(260f, 40f));
+        bool hasHealth = result.health > 0f || result.passed;
+        statusText.text = hasHealth
+            ? (result.passed ? $"CLEAR  {Mathf.RoundToInt(result.health)}%" : $"FAILED  {Mathf.RoundToInt(result.health)}%")
+            : string.Empty;
+        statusText.fontSize = 26f;
+        statusText.fontStyle = FontStyles.Bold;
+        statusText.alignment = TextAlignmentOptions.Center;
+        statusText.textWrappingMode = TextWrappingModes.NoWrap;
+        statusText.overflowMode = TextOverflowModes.Overflow;
+        statusText.color = result.passed ? new Color(0.66f, 1f, 0.78f, 1f) : new Color(1f, 0.36f, 0.46f, 1f);
+        TmpRuntimeFontFallback.Apply(statusText);
+    }
+
     private static void RepairLayout(Transform overlay)
     {
         RectTransform leftSongInfo = FindRect(overlay, "Left_SongInfo");
         if (leftSongInfo != null)
         {
-            SetRect(leftSongInfo, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(112f, 0f), new Vector2(230f, 255f));
+            SetRect(leftSongInfo, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(128f, 0f), new Vector2(260f, 260f));
             leftSongInfo.localScale = Vector3.one;
         }
 
         RectTransform rightScoreBoard = FindRect(overlay, "Right_ScoreBoard");
         if (rightScoreBoard != null)
         {
-            SetRect(rightScoreBoard, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-82f, 8f), new Vector2(130f, 105f));
+            SetRect(rightScoreBoard, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-108f, 0f), new Vector2(168f, 126f));
             rightScoreBoard.localScale = Vector3.one;
             RepairComboBadgeChildren(rightScoreBoard);
         }
@@ -46,16 +84,17 @@ public static class ResultSongBackdrop
         RectTransform maxCombo = FindRect(overlay, "MaxComboText");
         if (maxCombo != null)
         {
-            SetRect(maxCombo, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-92f, 0f), new Vector2(116f, 46f));
+            SetRect(maxCombo, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-112f, -12f), new Vector2(128f, 58f));
             TextMeshProUGUI comboText = maxCombo.GetComponent<TextMeshProUGUI>();
             if (comboText != null)
             {
-                comboText.fontSize = 32f;
+                comboText.fontSize = 36f;
                 comboText.enableAutoSizing = true;
                 comboText.fontSizeMin = 18f;
-                comboText.fontSizeMax = 32f;
+                comboText.fontSizeMax = 36f;
                 comboText.alignment = TextAlignmentOptions.Center;
-                comboText.overflowMode = TextOverflowModes.Ellipsis;
+                comboText.textWrappingMode = TextWrappingModes.NoWrap;
+                comboText.overflowMode = TextOverflowModes.Overflow;
             }
         }
 
@@ -73,20 +112,22 @@ public static class ResultSongBackdrop
         TextMeshProUGUI title = FindSongTitleText(leftSongInfo);
         if (title != null)
         {
-            SetRect(title.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, -6f), new Vector2(218f, 44f));
+            SetRect(title.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(4f, -8f), new Vector2(238f, 62f));
+            TmpRuntimeFontFallback.Apply(title);
             title.text = song != null && !string.IsNullOrWhiteSpace(song.SongTitle) ? song.SongTitle : "Unknown Song";
-            title.fontSize = 24f;
+            title.fontSize = 18f;
             title.enableAutoSizing = true;
-            title.fontSizeMin = 14f;
-            title.fontSizeMax = 24f;
+            title.fontSizeMin = 10f;
+            title.fontSizeMax = 18f;
             title.alignment = TextAlignmentOptions.Left;
+            title.textWrappingMode = TextWrappingModes.Normal;
             title.overflowMode = TextOverflowModes.Ellipsis;
         }
 
         Image cover = FindSongCoverImage(leftSongInfo);
         if (cover != null)
         {
-            SetRect(cover.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(8f, -58f), new Vector2(150f, 150f));
+            SetRect(cover.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(8f, -78f), new Vector2(172f, 172f));
             cover.sprite = song != null ? song.PreviewImage : null;
             cover.type = Image.Type.Simple;
             cover.preserveAspect = true;
@@ -102,7 +143,7 @@ public static class ResultSongBackdrop
             if (image == null)
                 continue;
 
-            SetRect(image.rectTransform, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(0f, 0f), new Vector2(122f, 76f));
+            SetRect(image.rectTransform, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-8f, 0f), new Vector2(150f, 98f));
             image.preserveAspect = true;
         }
 
@@ -112,10 +153,18 @@ public static class ResultSongBackdrop
             if (label == null)
                 continue;
 
-            if (label.text == "COMBO")
+            string normalized = label.text.Replace("\n", string.Empty).Replace("\r", string.Empty).Trim().ToUpperInvariant();
+            if (normalized == "COMBO")
             {
-                SetRect(label.rectTransform, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-18f, 22f), new Vector2(88f, 26f));
-                label.fontSize = 17f;
+                label.text = "COMBO";
+                SetRect(label.rectTransform, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-56f, 32f), new Vector2(82f, 24f));
+                label.fontSize = 15f;
+                label.enableAutoSizing = true;
+                label.fontSizeMin = 9f;
+                label.fontSizeMax = 15f;
+                label.alignment = TextAlignmentOptions.Center;
+                label.textWrappingMode = TextWrappingModes.NoWrap;
+                label.overflowMode = TextOverflowModes.Overflow;
             }
         }
     }

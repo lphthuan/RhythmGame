@@ -2,8 +2,14 @@
 using UnityEngine;
 using UnityEngine.UI;
 
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
+
 public class HitEffectSpriteReceiver : MonoBehaviour, INoteResultReceiver
 {
+    public static HitEffectSpriteReceiver ActiveReceiver { get; private set; }
+
     [Header("References")]
     [SerializeField] private Canvas targetCanvas;
     [SerializeField] private NoteManager noteManager;
@@ -48,9 +54,13 @@ public class HitEffectSpriteReceiver : MonoBehaviour, INoteResultReceiver
 
     private int activeEffectCount;
     private int stackSerial;
+    private bool isSubscribed;
+    public bool IsSubscribed => isSubscribed;
 
     private void Awake()
     {
+        RestoreMissingSprites();
+
         if (targetCanvas == null)
             targetCanvas = FindFirstObjectByType<Canvas>();
 
@@ -66,22 +76,59 @@ public class HitEffectSpriteReceiver : MonoBehaviour, INoteResultReceiver
 
     private void OnEnable()
     {
-        if (noteManager != null)
-        {
-            noteManager.OnNoteJudgedEvent += HandleNoteJudged;
-            noteManager.OnNoteFinishedEvent += HandleNoteFinished;
-            noteManager.OnNoteSustainEvent += HandleNoteSustain;
-        }
+        ActiveReceiver = this;
+        EnsureSubscribed();
+    }
+
+    private void Start()
+    {
+        EnsureReferences();
+        EnsureSubscribed();
     }
 
     private void OnDisable()
     {
-        if (noteManager != null)
+        if (ActiveReceiver == this)
+            ActiveReceiver = null;
+
+        if (noteManager != null && isSubscribed)
         {
             noteManager.OnNoteJudgedEvent -= HandleNoteJudged;
             noteManager.OnNoteFinishedEvent -= HandleNoteFinished;
             noteManager.OnNoteSustainEvent -= HandleNoteSustain;
+            isSubscribed = false;
         }
+    }
+
+    private void EnsureReferences()
+    {
+        if (targetCanvas == null)
+            targetCanvas = FindFirstObjectByType<Canvas>();
+
+        if (noteManager == null)
+            noteManager = FindFirstObjectByType<NoteManager>();
+
+        if (laneLayout == null)
+            laneLayout = FindFirstObjectByType<GameplayLaneLayout>();
+
+        if (targetCanvas != null && canvasRect == null)
+            canvasRect = targetCanvas.GetComponent<RectTransform>();
+    }
+
+    private void EnsureSubscribed()
+    {
+        if (isSubscribed)
+            return;
+
+        EnsureReferences();
+
+        if (noteManager == null)
+            return;
+
+        noteManager.OnNoteJudgedEvent += HandleNoteJudged;
+        noteManager.OnNoteFinishedEvent += HandleNoteFinished;
+        noteManager.OnNoteSustainEvent += HandleNoteSustain;
+        isSubscribed = true;
     }
 
     private void HandleNoteJudged(NoteBase note, HitJudgment judgment, float deltaMs)
@@ -94,6 +141,16 @@ public class HitEffectSpriteReceiver : MonoBehaviour, INoteResultReceiver
 
         SpawnCenterEffect(judgment);
         SpawnLaneFlash(note);
+    }
+
+    public void ShowJudgmentEffect(NoteBase note, HitJudgment judgment)
+    {
+        HandleNoteJudged(note, judgment, note != null ? note.LastDeltaMs : 0f);
+    }
+
+    public void ShowMissEffect(NoteBase note)
+    {
+        HandleNoteFinished(note, NoteResult.Missed);
     }
 
     public void OnNoteFinished(NoteBase note, NoteResult result)
@@ -364,4 +421,79 @@ public class HitEffectSpriteReceiver : MonoBehaviour, INoteResultReceiver
                 return null;
         }
     }
+
+    private void RestoreMissingSprites()
+    {
+#if UNITY_EDITOR
+        if (laneFlashSprites == null || laneFlashSprites.Length == 0)
+            laneFlashSprites = LoadLightingSprites();
+
+        if (perfectSprite == null)
+            perfectSprite = LoadSprite(
+                "Assets/_Game/Sprites/GamePlay/PerfectEF/mania-hit300@2x.png",
+                "Assets/_Game/Sprites/GamePlay/PerfectEF/mania-hit300.png"
+            );
+        if (greatSprite == null)
+            greatSprite = LoadSprite(
+                "Assets/_Game/Sprites/GamePlay/PerfectEF/mania-hit200@2x.png",
+                "Assets/_Game/Sprites/GamePlay/PerfectEF/mania-hit200.png"
+            );
+        if (goodSprite == null)
+            goodSprite = LoadSprite(
+                "Assets/_Game/Sprites/GamePlay/PerfectEF/mania-hit100@2x.png",
+                "Assets/_Game/Sprites/GamePlay/PerfectEF/mania-hit100.png"
+            );
+        if (missSprite == null)
+            missSprite = LoadSprite(
+                "Assets/_Game/Sprites/GamePlay/PerfectEF/mania-hit0@2x.png",
+                "Assets/_Game/Sprites/GamePlay/PerfectEF/mania-hit0.png"
+            );
+#endif
+    }
+
+#if UNITY_EDITOR
+    private static Sprite[] LoadLightingSprites()
+    {
+        const int frameCount = 16;
+        Sprite[] sprites = new Sprite[frameCount];
+
+        for (int i = 0; i < frameCount; i++)
+        {
+            sprites[i] = LoadSprite(
+                $"Assets/_Game/Sprites/GamePlay/HitEf/lightingN-{i}@2x.png",
+                $"Assets/_Game/Sprites/GamePlay/HitEf/lightingN-{i}.png"
+            );
+        }
+
+        return sprites;
+    }
+
+    private static Sprite LoadSprite(params string[] paths)
+    {
+        foreach (string path in paths)
+        {
+            Sprite sprite = LoadSpriteAtPath(path);
+            if (sprite != null)
+                return sprite;
+        }
+
+        return null;
+    }
+
+    private static Sprite LoadSpriteAtPath(string path)
+    {
+        Sprite sprite = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+        if (sprite != null)
+            return sprite;
+
+        Object[] assets = AssetDatabase.LoadAllAssetsAtPath(path);
+        foreach (Object asset in assets)
+        {
+            if (asset is Sprite nestedSprite)
+                return nestedSprite;
+        }
+
+        return null;
+    }
+#endif
 }

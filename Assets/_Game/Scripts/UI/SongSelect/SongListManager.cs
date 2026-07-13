@@ -56,6 +56,7 @@ public class SongListManager : MonoBehaviour
     private Difficulty _selectedDifficulty = Difficulty.Medium;
     private readonly Dictionary<Difficulty, Image> _difficultyButtonImages = new();
     private readonly Dictionary<Difficulty, TextMeshProUGUI> _difficultyButtonLabels = new();
+    private readonly Dictionary<Difficulty, TextMeshProUGUI> _difficultyButtonScores = new();
 
     private sealed class CarouselCard
     {
@@ -67,6 +68,7 @@ public class SongListManager : MonoBehaviour
         public TextMeshProUGUI Bpm;
         public TextMeshProUGUI Rank;
         public TextMeshProUGUI BestScore;
+        public SongTitleMarquee Marquee;
     }
 
     private void Awake() => Instance = this;
@@ -87,6 +89,9 @@ public class SongListManager : MonoBehaviour
 
     private void Update()
     {
+        if (_cards.Count > 0)
+            UpdateCarousel();
+
         if (WasConfirmPressedThisFrame())
             PlaySelectedSong();
 
@@ -231,12 +236,16 @@ public class SongListManager : MonoBehaviour
         Anchor(detail, new Vector2(0.03f, 0.10f), new Vector2(0.57f, 0.87f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
 
         RectTransform difficultyGroup = CreateRect("Difficulty Buttons", detail);
-        Anchor(difficultyGroup, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(22f, -25f), new Vector2(330f, 36f));
+        Anchor(difficultyGroup, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(22f, -29f), new Vector2(348f, 48f));
         CreateDifficultyButton(difficultyGroup, Difficulty.Easy, "EASY", 0f);
-        CreateDifficultyButton(difficultyGroup, Difficulty.Medium, "NORMAL", 112f);
-        CreateDifficultyButton(difficultyGroup, Difficulty.Hard, "HARD", 224f);
+        CreateDifficultyButton(difficultyGroup, Difficulty.Medium, "NORMAL", 118f);
+        CreateDifficultyButton(difficultyGroup, Difficulty.Hard, "HARD", 236f);
 
-        _titleText = CreateText("", detail, 36, FontStyles.Bold, TextAlignmentOptions.Left, Color.white, new Vector2(22f, -74f), new Vector2(355f, 50f), new Vector2(0f, 1f), new Vector2(0f, 1f));
+        RectTransform titleClip = CreateRect("Selected Song Title Clip", detail);
+        Anchor(titleClip, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(22f, -74f), new Vector2(355f, 50f));
+        titleClip.gameObject.AddComponent<RectMask2D>();
+        _titleText = CreateText("", titleClip, 36, FontStyles.Bold, TextAlignmentOptions.Left, Color.white, Vector2.zero, new Vector2(760f, 50f), new Vector2(0f, 0.5f), new Vector2(0f, 0.5f));
+        _titleText.gameObject.AddComponent<SongTitleMarquee>();
         _artistText = CreateText("", detail, 17, FontStyles.Normal, TextAlignmentOptions.Left, new Color(0.88f, 0.80f, 0.96f, 1f), new Vector2(24f, -120f), new Vector2(340f, 28f), new Vector2(0f, 1f), new Vector2(0f, 1f));
         _bpmText = CreateText("BPM: --", detail, 19, FontStyles.Bold, TextAlignmentOptions.Left, new Color(1f, 0.81f, 0.32f, 1f), new Vector2(24f, -155f), new Vector2(260f, 30f), new Vector2(0f, 1f), new Vector2(0f, 1f));
 
@@ -261,16 +270,21 @@ public class SongListManager : MonoBehaviour
 
     private void CreateDifficultyButton(RectTransform parent, Difficulty difficulty, string label, float x)
     {
-        RectTransform rect = CreateButton(label + " Difficulty", parent, label, DifficultyColor(difficulty), 15f);
-        Anchor(rect, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(x, 0f), new Vector2(104f, 34f));
+        RectTransform rect = CreatePanel(label + " Difficulty", parent, DifficultyColor(difficulty));
+        Anchor(rect, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(x, 0f), new Vector2(112f, 44f));
 
-        Button button = rect.GetComponent<Button>();
+        Button button = rect.gameObject.AddComponent<Button>();
+        button.targetGraphic = rect.GetComponent<Image>();
         button.onClick.AddListener(() => SelectDifficulty(difficulty));
 
+        TextMeshProUGUI nameText = CreateText(label, rect, 14, FontStyles.Bold, TextAlignmentOptions.Center, Color.white, new Vector2(0f, 8f), new Vector2(104f, 20f));
+        TextMeshProUGUI scoreText = CreateText("0000000", rect, 10, FontStyles.Bold, TextAlignmentOptions.Center, new Color(1f, 1f, 1f, 0.80f), new Vector2(0f, -11f), new Vector2(104f, 18f));
+
         _difficultyButtonImages[difficulty] = rect.GetComponent<Image>();
-        _difficultyButtonLabels[difficulty] = rect.GetComponentInChildren<TextMeshProUGUI>(true);
+        _difficultyButtonLabels[difficulty] = nameText;
+        _difficultyButtonScores[difficulty] = scoreText;
         if (difficulty == Difficulty.Medium)
-            _difficultyText = _difficultyButtonLabels[difficulty];
+            _difficultyText = nameText;
     }
 
     private void BuildCarousel(RectTransform root)
@@ -296,7 +310,7 @@ public class SongListManager : MonoBehaviour
         _carouselContent.anchorMax = new Vector2(1f, 1f);
         _carouselContent.pivot = new Vector2(0.5f, 1f);
         _carouselContent.anchoredPosition = Vector2.zero;
-        _carouselContent.sizeDelta = new Vector2(0f, Mathf.Max(520f, _songList.Count * 108f + 72f));
+        _carouselContent.sizeDelta = new Vector2(0f, Mathf.Max(560f, _songList.Count * 118f + 84f));
         _carouselScrollRect.viewport = _carouselViewport;
         _carouselScrollRect.content = _carouselContent;
         _carouselScrollRect.onValueChanged.AddListener(_ => UpdateCarousel());
@@ -310,7 +324,7 @@ public class SongListManager : MonoBehaviour
                 CarouselCard card = _cards[song];
                 card.Rect.anchorMin = card.Rect.anchorMax = new Vector2(0.5f, 1f);
                 card.Rect.pivot = new Vector2(0.5f, 0.5f);
-                card.Rect.anchoredPosition = new Vector2(14f, -56f - songIndex * 108f);
+                card.Rect.anchoredPosition = new Vector2(14f, -62f - songIndex * 118f);
                 songIndex++;
             }
         }
@@ -319,14 +333,14 @@ public class SongListManager : MonoBehaviour
     private void CreateSongCard(SongData song, RectTransform parent)
     {
         RectTransform card = CreatePanel("Song Card - " + song.SongTitle, parent, new Color(0.11f, 0.03f, 0.16f, 0.92f));
-        card.sizeDelta = new Vector2(410f, 82f);
+        card.sizeDelta = new Vector2(430f, 96f);
         Image background = card.GetComponent<Image>();
         Button button = card.gameObject.AddComponent<Button>();
         button.targetGraphic = background;
         button.onClick.AddListener(() => SelectOrPlaySong(song));
 
         RectTransform artMask = CreatePanel("Card Art", card, Color.white);
-        Anchor(artMask, new Vector2(0.18f, 0f), new Vector2(0.68f, 1f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+        Anchor(artMask, new Vector2(0f, 0f), new Vector2(0.24f, 1f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
         artMask.gameObject.AddComponent<Mask>().showMaskGraphic = true;
         Image art = CreatePanel("Art", artMask, new Color(1f, 1f, 1f, 0.32f)).GetComponent<Image>();
         Stretch(art.rectTransform);
@@ -335,15 +349,21 @@ public class SongListManager : MonoBehaviour
         art.raycastTarget = false;
 
         RectTransform difficulty = CreatePanel("Difficulty", card, DifficultyColor(song));
-        Anchor(difficulty, new Vector2(0f, 0f), new Vector2(0.22f, 1f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
-        TextMeshProUGUI difficultyText = CreateText(GetDifficultyLabel(song), difficulty, 16, FontStyles.Bold, TextAlignmentOptions.Center, Color.white, Vector2.zero, new Vector2(86f, 34f));
+        Anchor(difficulty, new Vector2(0.24f, 0f), new Vector2(0.39f, 1f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+        TextMeshProUGUI difficultyText = CreateText(GetDifficultyLabel(song), difficulty, 13, FontStyles.Bold, TextAlignmentOptions.Center, Color.white, Vector2.zero, new Vector2(62f, 34f));
         RectTransform textArea = CreateRect("Text", card);
-        Anchor(textArea, new Vector2(0.24f, 0f), new Vector2(0.82f, 1f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
-        TextMeshProUGUI title = CreateText(song.SongTitle, textArea, 17, FontStyles.Bold, TextAlignmentOptions.Left, Color.white, new Vector2(4f, 15f), new Vector2(230f, 26f), new Vector2(0f, 0.5f), new Vector2(0f, 0.5f));
-        TextMeshProUGUI bpm = CreateText(GetBpmLabel(song), textArea, 12, FontStyles.Normal, TextAlignmentOptions.Left, new Color(0.97f, 0.86f, 1f, 1f), new Vector2(4f, -16f), new Vector2(210f, 22f), new Vector2(0f, 0.5f), new Vector2(0f, 0.5f));
-        TextMeshProUGUI rank = CreateText("-", card, 26, FontStyles.Bold, TextAlignmentOptions.Center, new Color(1f, 0.55f, 0.82f, 1f), new Vector2(-24f, 11f), new Vector2(58f, 32f), Vector2.right, Vector2.right);
-        TextMeshProUGUI bestScore = CreateText("0000000", card, 13, FontStyles.Bold, TextAlignmentOptions.Center, new Color(1f, 1f, 1f, 0.86f), new Vector2(-24f, -18f), new Vector2(86f, 22f), Vector2.right, Vector2.right);
-        _cards[song] = new CarouselCard { Rect = card, Background = background, Art = art, Difficulty = difficultyText, Title = title, Bpm = bpm, Rank = rank, BestScore = bestScore };
+        Anchor(textArea, new Vector2(0.40f, 0f), new Vector2(0.78f, 1f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+        RectTransform titleClip = CreateRect("Title Clip", textArea);
+        Anchor(titleClip, new Vector2(0f, 0.5f), new Vector2(1f, 0.5f), new Vector2(0f, 0.5f), new Vector2(4f, 15f), new Vector2(-8f, 28f));
+        titleClip.gameObject.AddComponent<RectMask2D>();
+        TextMeshProUGUI title = CreateText(song.SongTitle, titleClip, 17, FontStyles.Bold, TextAlignmentOptions.Left, Color.white, Vector2.zero, new Vector2(460f, 28f), new Vector2(0f, 0.5f), new Vector2(0f, 0.5f));
+        SongTitleMarquee marquee = title.gameObject.AddComponent<SongTitleMarquee>();
+        TextMeshProUGUI bpm = CreateText(GetBpmLabel(song), textArea, 12, FontStyles.Normal, TextAlignmentOptions.Left, new Color(0.97f, 0.86f, 1f, 1f), new Vector2(4f, -18f), new Vector2(170f, 22f), new Vector2(0f, 0.5f), new Vector2(0f, 0.5f));
+        RectTransform scorePanel = CreatePanel("Card Score", card, new Color(0.18f, 0.04f, 0.17f, 0.72f));
+        Anchor(scorePanel, new Vector2(0.79f, 0f), new Vector2(1f, 1f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+        TextMeshProUGUI rank = CreateText("-", scorePanel, 28, FontStyles.Bold, TextAlignmentOptions.Center, new Color(1f, 0.55f, 0.82f, 1f), new Vector2(0f, 14f), new Vector2(84f, 34f));
+        TextMeshProUGUI bestScore = CreateText("0000000", scorePanel, 12, FontStyles.Bold, TextAlignmentOptions.Center, new Color(1f, 1f, 1f, 0.86f), new Vector2(0f, -18f), new Vector2(86f, 20f));
+        _cards[song] = new CarouselCard { Rect = card, Background = background, Art = art, Difficulty = difficultyText, Title = title, Bpm = bpm, Rank = rank, BestScore = bestScore, Marquee = marquee };
     }
 
     private void SelectSong(SongData song, bool playPreview)
@@ -387,6 +407,9 @@ public class SongListManager : MonoBehaviour
     private void ShowSongDetails(SongData song)
     {
         _titleText.text = song.SongTitle;
+        SongTitleMarquee detailMarquee = _titleText.GetComponent<SongTitleMarquee>();
+        if (detailMarquee != null)
+            detailMarquee.ResetScroll();
         _artistText.text = "Tap selected song again to start.";
         _bpmText.text = GetBpmLabel(song);
         _previewArt.sprite = song.PreviewImage;
@@ -419,6 +442,14 @@ public class SongListManager : MonoBehaviour
         {
             bool selected = item.Key == _selectedDifficulty;
             item.Value.color = selected ? Color.white : new Color(1f, 1f, 1f, 0.68f);
+        }
+
+        foreach (KeyValuePair<Difficulty, TextMeshProUGUI> item in _difficultyButtonScores)
+        {
+            SongPlayStats stats = _selectedSong != null ? SongPlayStats.Load(_selectedSong, item.Key) : default;
+            bool selected = item.Key == _selectedDifficulty;
+            item.Value.text = stats.BestScore.ToString("D7");
+            item.Value.color = selected ? new Color(1f, 1f, 1f, 0.92f) : new Color(1f, 1f, 1f, 0.55f);
         }
     }
 
@@ -455,11 +486,13 @@ public class SongListManager : MonoBehaviour
             float localY = _carouselViewport.InverseTransformPoint(item.Value.Rect.position).y;
             float t = Mathf.Clamp01(1f - Mathf.Abs(localY) / 220f);
             float scale = Mathf.Lerp(0.74f, 1.12f, t);
-            item.Value.Rect.localScale = Vector3.one * scale;
-            item.Value.Rect.anchoredPosition = new Vector2(Mathf.Lerp(38f, -14f, t), item.Value.Rect.anchoredPosition.y);
-            item.Value.Background.color = item.Key == _selectedSong
+            float lerpSpeed = Application.isPlaying ? Time.unscaledDeltaTime * 12f : 1f;
+            item.Value.Rect.localScale = Vector3.Lerp(item.Value.Rect.localScale, Vector3.one * scale, lerpSpeed);
+            item.Value.Rect.anchoredPosition = new Vector2(Mathf.Lerp(item.Value.Rect.anchoredPosition.x, Mathf.Lerp(38f, -14f, t), lerpSpeed), item.Value.Rect.anchoredPosition.y);
+            Color targetColor = item.Key == _selectedSong
                 ? new Color(0.60f, 0.08f, 0.44f, 0.98f)
                 : new Color(0.11f, 0.03f, 0.16f, 0.92f);
+            item.Value.Background.color = Color.Lerp(item.Value.Background.color, targetColor, lerpSpeed);
             Difficulty displayDifficulty = item.Key == _selectedSong ? _selectedDifficulty : GetPreferredDifficulty(item.Key);
             SongPlayStats stats = SongPlayStats.Load(item.Key, displayDifficulty);
             item.Value.Difficulty.text = GetDifficultyLabel(displayDifficulty).ToUpperInvariant();
@@ -813,7 +846,6 @@ public class SongListManager : MonoBehaviour
         Vector2 anchorMax = max ?? anchorMin;
         Anchor(rect, anchorMin, anchorMax, anchorMin, position, dimensions);
         TextMeshProUGUI label = rect.gameObject.AddComponent<TextMeshProUGUI>();
-        label.text = text;
         label.fontSize = size;
         label.fontStyle = style;
         label.alignment = alignment;
@@ -821,6 +853,8 @@ public class SongListManager : MonoBehaviour
         label.textWrappingMode = TextWrappingModes.NoWrap;
         label.overflowMode = TextOverflowModes.Ellipsis;
         label.raycastTarget = false;
+        TmpRuntimeFontFallback.Apply(label);
+        label.text = text;
         return label;
     }
 

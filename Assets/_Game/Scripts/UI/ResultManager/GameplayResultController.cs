@@ -100,9 +100,13 @@ public class GameplayResultController : MonoBehaviour
 
         resultOverlay.SetActive(true);
         WireResultButtons();
-        int maxCombo = comboManager != null ? comboManager.MaxCombo : _perfect + _great + _good;
-        GameplayResultData result = new GameplayResultData(_perfect, _great, _good, _miss, maxCombo);
-        ResultSongBackdrop.Apply(resultOverlay);
+        ComboManager resolvedComboManager = ResolveComboManager();
+        int maxCombo = resolvedComboManager != null ? resolvedComboManager.MaxCombo : _perfect + _great + _good;
+        GameplayHudController hud = GameplayHudController.Instance;
+        float health = hud != null ? hud.Health : 0f;
+        bool passed = hud != null ? hud.IsPassed : _miss == 0;
+        GameplayResultData result = new GameplayResultData(_perfect, _great, _good, _miss, maxCombo, health, passed);
+        ResultSongBackdrop.Apply(resultOverlay, result);
         SongData selectedSong = SelectedSongManager.Instance != null ? SelectedSongManager.Instance.SelectedSong : null;
         SongPlayStats.Save(selectedSong, result);
         resultPro.Show(result);
@@ -146,6 +150,25 @@ public class GameplayResultController : MonoBehaviour
             backButton.onClick.RemoveListener(BackToSongSelect);
             backButton.onClick.AddListener(BackToSongSelect);
         }
+    }
+
+    private ComboManager ResolveComboManager()
+    {
+        GameObject runtimeComboObject = GameObject.Find("RG Runtime Combo Manager");
+        ComboManager runtimeCombo = runtimeComboObject != null
+            ? runtimeComboObject.GetComponent<ComboManager>()
+            : null;
+
+        if (runtimeCombo != null)
+        {
+            comboManager = runtimeCombo;
+            return comboManager;
+        }
+
+        if (comboManager == null)
+            comboManager = FindFirstObjectByType<ComboManager>();
+
+        return comboManager;
     }
 
     private Button FindButton(string buttonName)
