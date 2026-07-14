@@ -150,6 +150,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   targetCanvas: {fileID: 2130496410}
   noteManager: {fileID: 1842031010}
+  laneLayout: {fileID: 0}
   perfectSprite: {fileID: 7014676936013354292, guid: 51177e1e5bea27846a66058c3dc31328, type: 3}
   greatSprite: {fileID: -7527175163823706875, guid: 0c96da92c7ae7a148a3c942f1afd23c0, type: 3}
   goodSprite: {fileID: -3777184159844669818, guid: faf5f9d9549f42144a49a07cdc28bf6f, type: 3}
@@ -162,6 +163,11 @@ MonoBehaviour:
   stackedOffsetRadius: 18
   stackedScaleStep: 0.04
   stackedRotationRange: 2
+  laneFlashSprites: []
+  laneFlashSize: {x: 190, y: 150}
+  laneFlashFrameTime: 0.025
+  laneFlashYOffset: 42
+  useLaneLayoutSize: 1
   startScale: 0.65
   popScale: 1.18
   settleScale: 1
@@ -395,6 +401,66 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 1204.0865, y: 978.97473, z: -7.895132}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &966472830
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 966472832}
+  - component: {fileID: 966472831}
+  m_Layer: 0
+  m_Name: EarlyLateIndicator
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &966472831
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 966472830}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ba591ee4aafd2d54cbec654ef24aa12e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _noteManager: {fileID: 1842031010}
+  _targetCanvas: {fileID: 2130496410}
+  _posYMiddle: 30
+  _posYTop: 200
+  _posYBottom: -80
+  _posX: 0
+  _earlyColor: {r: 0.43, g: 0.78, b: 1, a: 1}
+  _lateColor: {r: 1, g: 0.7, b: 0.28, a: 1}
+  _fontSize: 28
+  _fontStyle: 1
+  _startScale: 0.55
+  _popScale: 1.15
+  _popDuration: 0.1
+  _lifetime: 0.55
+  _fadeStartTime: 0.28
+  _floatUpDistance: 18
+--- !u!4 &966472832
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 966472830}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -956,6 +1022,15 @@ MonoBehaviour:
   requireNearHitline: 1
   hitlineY: -330
   hitlineJudgeDistance: 150
+  useLaneLayoutHitbox: 1
+  laneHitboxWidthRatio: 0.95
+  enableKeyboardLaneInput: 1
+  ignoreEditorMouseWhenTouchActive: 1
+  laneLayout: {fileID: 0}
+  lane0Key: 97
+  lane1Key: 115
+  lane2Key: 59
+  lane3Key: 39
 --- !u!4 &1842031011
 Transform:
   m_ObjectHideFlags: 0
@@ -1216,3 +1291,4 @@ SceneRoots:
   - {fileID: 2131376832}
   - {fileID: 809902540}
   - {fileID: 2130496409}
+  - {fileID: 966472832}
