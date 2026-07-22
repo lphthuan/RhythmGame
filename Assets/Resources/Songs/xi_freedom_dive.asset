@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c8f7d430bcc8bb4f986a97d225050e1, type: 3}
+  m_Name: xi_freedom_dive
+  m_EditorClassIdentifier: 
+  _songTitle: xi - FREEDOM DiVE
+  _sceneName: KhoaCuBu
+  _previewImage: {fileID: 21300000, guid: f6d51d56e0225bb4fac6185f40bbbfe5, type: 3}
+  _bpm: 222.22002
+  _difficulty: Normal
+  songGroupId: xi_freedom_dive
+  difficultyLevel: 1
+  unlockType: 0
+  chartFileName: 
+  audioClip: {fileID: 8300000, guid: 0c26052f3cd36524c83c885e28600f7f, type: 3}
+  timelineAsset: {fileID: 0}
+  easyChartFileName: chart_freedom_dive_easy
+  normalChartFileName: chart_freedom_dive_normal
+  hardChartFileName: chart_freedom_dive_hard
+  easyTimelineAsset: {fileID: 11400000, guid: 43aecddcd600cb648988f91f6f84487e, type: 2}
+  normalTimelineAsset: {fileID: 11400000, guid: a83949b62b455584db81a50218939cd8, type: 2}
+  hardTimelineAsset: {fileID: 11400000, guid: 8882d614debef3a4a8ffe015260ac8ad, type: 2}

@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c8f7d430bcc8bb4f986a97d225050e1, type: 3}
+  m_Name: mikitoP - 1 2
+  m_EditorClassIdentifier: 
+  _songTitle: "\u307F\u304D\u3068P - \u3044\u30FC\u3042\u308B\u3075\u3041\u3093\u304F\u3089\u3076"
+  _sceneName: KhoaCuBu
+  _previewImage: {fileID: 21300000, guid: 721e2e4d3a880ab4d8df7f329b470714, type: 3}
+  _bpm: 145
+  _difficulty: Normal
+  songGroupId: "\u307F\u304D\u3068p_\u3044\u30FC\u3042\u308B\u3075\u3041\u3093\u304F\u3089\u3076"
+  difficultyLevel: 1
+  unlockType: 0
+  moneyPrice: 500
+  diamondPrice: 10
+  chartFileName: 
+  audioClip: {fileID: 8300000, guid: 2e8db1d7a67546f458c41b02c6cdeef8, type: 3}
+  timelineAsset: {fileID: 0}
+  easyChartFileName: "chart_\u307F\u304D\u3068p_\u3044\u30FC\u3042\u308B\u3075\u3041\u3093\u304F\u3089\u3076_easy"
+  normalChartFileName: "chart_\u307F\u304D\u3068p_\u3044\u30FC\u3042\u308B\u3075\u3041\u3093\u304F\u3089\u3076_normal"
+  hardChartFileName: "chart_\u307F\u304D\u3068p_\u3044\u30FC\u3042\u308B\u3075\u3041\u3093\u304F\u3089\u3076_hard"
+  easyTimelineAsset: {fileID: 11400000, guid: fb240e706339cd948a6fab4786c72a00, type: 2}
+  normalTimelineAsset: {fileID: 11400000, guid: 4365fb59a1db7484dbfff0f79191d1dd, type: 2}
+  hardTimelineAsset: {fileID: 11400000, guid: b837914edf11ad54aba2b75074701757, type: 2}

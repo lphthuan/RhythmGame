@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c8f7d430bcc8bb4f986a97d225050e1, type: 3}
+  m_Name: "\u30EF\u30F3\u30C0\u30FC\u30E9\u30F3\u30BA\u30B7\u30E7\u30A6\u30BF\u30A4\u30E0_\u521D\u97F3\u30DF\u30AF_\u30C0\u30F3\u30B9\u30ED\u30DC\u30C3\u30C8\u30C0\u30F3\u30B9"
+  m_EditorClassIdentifier: 
+  _songTitle: "\u30EF\u30F3\u30C0\u30FC\u30E9\u30F3\u30BA\xD7\u30B7\u30E7\u30A6\u30BF\u30A4\u30E0
+    \xD7 \u521D\u97F3\u30DF\u30AF - \u30C0\u30F3\u30B9\u30ED\u30DC\u30C3\u30C8\u30C0\u30F3\u30B9"
+  _sceneName: KhoaCuBu
+  _previewImage: {fileID: 21300000, guid: 2a0fc26fb7ff7a642b8120ad55af982e, type: 3}
+  _bpm: 190.00002
+  _difficulty: Normal
+  songGroupId: "\u30EF\u30F3\u30C0\u30FC\u30E9\u30F3\u30BA\u30B7\u30E7\u30A6\u30BF\u30A4\u30E0_\u521D\u97F3\u30DF\u30AF_\u30C0\u30F3\u30B9\u30ED\u30DC\u30C3\u30C8\u30C0\u30F3\u30B9"
+  difficultyLevel: 1
+  unlockType: 0
+  moneyPrice: 500
+  diamondPrice: 10
+  chartFileName: 
+  audioClip: {fileID: 8300000, guid: d840254dfe032934a818f75d8c06b3fe, type: 3}
+  timelineAsset: {fileID: 0}
+  easyChartFileName: "chart_\u30EF\u30F3\u30C0\u30FC\u30E9\u30F3\u30BA\u30B7\u30E7\u30A6\u30BF\u30A4\u30E0_\u521D\u97F3\u30DF\u30AF_\u30C0\u30F3\u30B9\u30ED\u30DC\u30C3\u30C8\u30C0\u30F3\u30B9_easy"
+  normalChartFileName: "chart_\u30EF\u30F3\u30C0\u30FC\u30E9\u30F3\u30BA\u30B7\u30E7\u30A6\u30BF\u30A4\u30E0_\u521D\u97F3\u30DF\u30AF_\u30C0\u30F3\u30B9\u30ED\u30DC\u30C3\u30C8\u30C0\u30F3\u30B9_normal"
+  hardChartFileName: "chart_\u30EF\u30F3\u30C0\u30FC\u30E9\u30F3\u30BA\u30B7\u30E7\u30A6\u30BF\u30A4\u30E0_\u521D\u97F3\u30DF\u30AF_\u30C0\u30F3\u30B9\u30ED\u30DC\u30C3\u30C8\u30C0\u30F3\u30B9_hard"
+  easyTimelineAsset: {fileID: 11400000, guid: 82db4489ca0564c45bc525473d51dbb1, type: 2}
+  normalTimelineAsset: {fileID: 11400000, guid: 65a1a8c3648503147aed5f73c0ba0088, type: 2}
+  hardTimelineAsset: {fileID: 11400000, guid: 36b9c96e46397934a88236afbd0531db, type: 2}

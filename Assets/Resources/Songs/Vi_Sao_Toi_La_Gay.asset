@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c8f7d430bcc8bb4f986a97d225050e1, type: 3}
+  m_Name: Vi_Sao_Toi_La_Gay
+  m_EditorClassIdentifier: 
+  _songTitle: Ytmp3.gg_YouTube_VI-SAO-TOI-LA-GAY-DO-TU-TAI-PHAT-HANH-20_Media_HP2C6bDjUqc_008_128k
+  _sceneName: KhoaCuBu
+  _previewImage: {fileID: 21300000, guid: 4670bbadd0290ab48b16abe74de2b3bf, type: 3}
+  _bpm: 166.5
+  _difficulty: Normal
+  songGroupId: unknown_artist_ytmp3gg_youtube_vi_sao_toi_la_gay_do_tu_tai_phat_hanh_20_media_hp2c6bdjuqc_008_128k
+  difficultyLevel: 1
+  unlockType: 0
+  chartFileName: 
+  audioClip: {fileID: 8300000, guid: c697c4d01cf85db489d8a8c88ba000af, type: 3}
+  timelineAsset: {fileID: 0}
+  easyChartFileName: chart_unknown_artist_ytmp3gg_youtube_vi_sao_toi_la_gay_do_tu_tai_phat_hanh_20_media_hp2c6bdjuqc_008_128k_easy
+  normalChartFileName: chart_unknown_artist_ytmp3gg_youtube_vi_sao_toi_la_gay_do_tu_tai_phat_hanh_20_media_hp2c6bdjuqc_008_128k_normal
+  hardChartFileName: chart_unknown_artist_ytmp3gg_youtube_vi_sao_toi_la_gay_do_tu_tai_phat_hanh_20_media_hp2c6bdjuqc_008_128k_hard
+  easyTimelineAsset: {fileID: 11400000, guid: b811f7694822f7f46bb46cb7afe0955f, type: 2}
+  normalTimelineAsset: {fileID: 11400000, guid: d060c1e9a7e11ee4487b736c10560bab, type: 2}
+  hardTimelineAsset: {fileID: 11400000, guid: 08f524093e2f6664d8cc69f3036dc644, type: 2}

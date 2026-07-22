@@ -20,12 +20,14 @@ MonoBehaviour:
   songGroupId: hoyo_mix_feat_robin_vo_chevysway_to_my_beat_in_cosmos
   difficultyLevel: 1
   unlockType: 0
+  moneyPrice: 500
+  diamondPrice: 10
   chartFileName: 
   audioClip: {fileID: 8300000, guid: 52e304cb6a041b147af1cd0127766b0d, type: 3}
   timelineAsset: {fileID: 0}
   easyChartFileName: Sway to My Beat in Cosmos_easy
-  normalChartFileName: chart_audio_medium
-  hardChartFileName: chart_audio_hard
+  normalChartFileName: chart_hoyo_mix_feat_robin_vo_chevysway_to_my_beat_in_cosmos_normal
+  hardChartFileName: chart_hoyo_mix_feat_robin_vo_chevysway_to_my_beat_in_cosmos_hard
   easyTimelineAsset: {fileID: 11400000, guid: 1978e655290b0344dba889146ed9af5c, type: 2}
   normalTimelineAsset: {fileID: 11400000, guid: 7228cf1312e8bc549acadbbf8a183b19, type: 2}
   hardTimelineAsset: {fileID: 11400000, guid: 765055edcea6d124ab208e8b12513fd3, type: 2}

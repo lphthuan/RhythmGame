@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c8f7d430bcc8bb4f986a97d225050e1, type: 3}
+  m_Name: xi_glorious_crown
+  m_EditorClassIdentifier: 
+  _songTitle: xi - Glorious Crown
+  _sceneName: KhoaCuBu
+  _previewImage: {fileID: 21300000, guid: d05d88f08f51b6445af5152a6f19e859, type: 3}
+  _bpm: 225.50002
+  _difficulty: Normal
+  songGroupId: xi_glorious_crown
+  difficultyLevel: 1
+  unlockType: 0
+  chartFileName: 
+  audioClip: {fileID: 8300000, guid: 96cc4bc945bd3a840a8c9b3041d34b6e, type: 3}
+  timelineAsset: {fileID: 0}
+  easyChartFileName: chart_glorious_crown_easy
+  normalChartFileName: chart_glorious_crown_normal
+  hardChartFileName: chart_glorious_crown_hard
+  easyTimelineAsset: {fileID: 11400000, guid: f1db4dbd4766142489090f9f36b5f0ee, type: 2}
+  normalTimelineAsset: {fileID: 11400000, guid: cb6a83c1751b6804ab3ef774ebc5c158, type: 2}
+  hardTimelineAsset: {fileID: 11400000, guid: 2319f7a9cf590274aaf9b3bf74c57168, type: 2}
