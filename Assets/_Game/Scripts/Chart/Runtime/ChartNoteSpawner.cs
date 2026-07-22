@@ -62,7 +62,10 @@ public class ChartNoteSpawner : MonoBehaviour
     [Header("Timing")]
     [Tooltip("Offset bổ sung theo chart. Mặc định 0; dùng Offset trong Settings để căn máy người chơi.")]
     [SerializeField] private float gameplayTimingOffsetSeconds = 0f;
-    [SerializeField] private float preSpawnTime = 2f;
+    [Tooltip("Thời gian xuất hiện sớm tối thiểu. Tốc độ thấp có thể cần lâu hơn để note đi hết màn hình.")]
+    [SerializeField, Min(0f)] private float preSpawnTime = 2f;
+    [Tooltip("Khoảng cách tối thiểu từ hitline khi note xuất hiện. Giữ note bắt đầu từ phía trên ngay cả ở tốc độ thấp.")]
+    [SerializeField, Min(0f)] private float minimumSpawnDistance = 900f;
 
     [Header("Debug")]
 
@@ -223,13 +226,13 @@ public class ChartNoteSpawner : MonoBehaviour
 
         if (playbackClock != null)
         {
-            float totalOffset = loadedChart.offset + RuntimeGameplaySettings.AudioOffsetSeconds;
+            float totalOffset = loadedChart.offset + RuntimeGameplaySettings.EffectiveAudioOffsetSeconds;
             playbackClock.SetOffset(totalOffset);
             // Master volume is applied at AudioListener level so previews, menus and chart music stay in sync.
             playbackClock.SetVolume(1f);
         }
 
-        Debug.Log($"ChartNoteSpawner: Applied chart offset: {loadedChart.offset} | Settings offset: {RuntimeGameplaySettings.AudioOffsetSeconds} | Gameplay offset: {gameplayTimingOffsetSeconds}");
+        Debug.Log($"ChartNoteSpawner: Applied chart offset: {loadedChart.offset} | Player offset: {RuntimeGameplaySettings.AudioOffsetSeconds} | Platform offset: {RuntimeGameplaySettings.PlatformAudioOffsetSeconds} | Gameplay offset: {gameplayTimingOffsetSeconds}");
 
         ClearSpawnedNotes();
 
@@ -248,23 +251,24 @@ public class ChartNoteSpawner : MonoBehaviour
         out ChartData loadedChart,
         out List<ChartNoteSpawnData> spawnDataList)
     {
-        if (!string.IsNullOrWhiteSpace(chartFileNameToLoad) &&
-            ChartSpawnDataProvider.TryGetChartAndSpawnData(
-                chartFileNameToLoad,
-                out loadedChart,
-                out spawnDataList))
-        {
-            return true;
-        }
-
         if (timelineToLoad != null &&
             ChartSpawnDataProvider.TryGetChartAndSpawnData(
                 timelineToLoad,
                 out loadedChart,
                 out spawnDataList))
         {
+            Debug.Log($"ChartNoteSpawner: Loaded timeline asset '{timelineToLoad.name}'.");
+            return true;
+        }
+
+        if (!string.IsNullOrWhiteSpace(chartFileNameToLoad) &&
+            ChartSpawnDataProvider.TryGetChartAndSpawnData(
+                chartFileNameToLoad,
+                out loadedChart,
+                out spawnDataList))
+        {
             Debug.LogWarning(
-                $"ChartNoteSpawner: JSON chart '{chartFileNameToLoad}' was not found. Loaded committed timeline asset '{timelineToLoad.name}' instead.");
+                $"ChartNoteSpawner: Timeline asset was unavailable. Loaded JSON fallback '{chartFileNameToLoad}'.");
             return true;
         }
 
@@ -329,7 +333,7 @@ public class ChartNoteSpawner : MonoBehaviour
         {
             ChartNoteSpawnData data = _spawnDataList[_nextSpawnIndex];
 
-            float spawnTime = data.hitTime - preSpawnTime;
+            float spawnTime = data.hitTime - GetPreSpawnTime();
 
             if (songTime < spawnTime)
             {
@@ -339,6 +343,12 @@ public class ChartNoteSpawner : MonoBehaviour
             SpawnNote(data);
             _nextSpawnIndex++;
         }
+    }
+
+    private float GetPreSpawnTime()
+    {
+        float safeScrollSpeed = Mathf.Max(1f, scrollSpeed);
+        return Mathf.Max(preSpawnTime, minimumSpawnDistance / safeScrollSpeed);
     }
 
     private void SpawnNote(ChartNoteSpawnData data)

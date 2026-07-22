@@ -18,10 +18,15 @@ public enum GameplaySfxCue
 public class GameplaySfxPlayer : MonoBehaviour
 {
     private const string CatalogPath = "GameplaySfxCatalog";
+    // A rhythm chart can trigger several taps in one frame. Keep a small fixed
+    // voice pool so bursts do not continuously add AudioSource components.
+    private const int InitialSourceCount = 8;
+    private const int MaxSourceCount = 16;
     private static GameplaySfxPlayer instance;
     private static GameplaySfxCatalog catalog;
 
     private readonly List<AudioSource> sources = new List<AudioSource>();
+    private int nextSourceToRecycle;
 
     public static GameplaySfxCatalog Catalog
     {
@@ -45,6 +50,15 @@ public class GameplaySfxPlayer : MonoBehaviour
         source.volume = IsTapSound(cue) ? RuntimeGameplaySettings.TapSoundVolume01 : 1f;
         source.Play();
         return clip.length;
+    }
+
+    /// <summary>Creates the bounded voice pool before gameplay starts.</summary>
+    public static void WarmUp()
+    {
+        // Load the small SFX catalog at a controlled point instead of during a
+        // dense first input burst.
+        _ = Catalog;
+        EnsureInstance().EnsureSourceCapacity(InitialSourceCount);
     }
 
     public static void PlayTapSound()
@@ -114,11 +128,36 @@ public class GameplaySfxPlayer : MonoBehaviour
                 return sources[i];
         }
 
+        if (sources.Count < MaxSourceCount)
+        {
+            AudioSource source = CreateSource();
+            sources.Add(source);
+            return source;
+        }
+
+        // At the configured ceiling, recycle the oldest round-robin voice. This
+        // caps component and mixer work while still preserving responsive taps.
+        AudioSource recycled = sources[nextSourceToRecycle];
+        nextSourceToRecycle = (nextSourceToRecycle + 1) % sources.Count;
+        recycled.Stop();
+        return recycled;
+    }
+
+    private void EnsureSourceCapacity(int count)
+    {
+        int target = Mathf.Min(count, MaxSourceCount);
+        while (sources.Count < target)
+            sources.Add(CreateSource());
+    }
+
+    private AudioSource CreateSource()
+    {
         AudioSource source = gameObject.AddComponent<AudioSource>();
         source.playOnAwake = false;
         source.loop = false;
         source.ignoreListenerPause = true;
-        sources.Add(source);
+        source.spatialBlend = 0f;
+        source.dopplerLevel = 0f;
         return source;
     }
 }

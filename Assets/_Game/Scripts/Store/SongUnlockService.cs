@@ -1,8 +1,23 @@
+using System.Collections.Generic;
+
 /// <summary>
 /// Purchase/unlock rules for songs. Kept separate from UI so account/server integration has one clear seam.
 /// </summary>
 public static class SongUnlockService
 {
+    // Song cards query this in Update. Store the result until this service is
+    // the one changing ownership, avoiding PlayerPrefs reads and key creation
+    // on every rendered carousel frame.
+    private static readonly Dictionary<SongData, bool> UnlockCache = new();
+
+    static SongUnlockService()
+    {
+        // StoreMenu's legacy song cards write ownership directly to
+        // PlayerInventory.  Invalidate the display cache so SongSelect sees a
+        // successful local purchase immediately, before account sync exists.
+        PlayerInventory.Changed += InvalidateUnlockCache;
+    }
+
     public static string GetSongItemId(SongData song)
     {
         if (song == null)
@@ -17,7 +32,12 @@ public static class SongUnlockService
         if (song == null)
             return false;
 
-        return song.unlockType == SongUnlockType.Free || PlayerInventory.IsOwned(GetSongItemId(song));
+        if (UnlockCache.TryGetValue(song, out bool unlocked))
+            return unlocked;
+
+        unlocked = song.unlockType == SongUnlockType.Free || PlayerInventory.IsOwned(GetSongItemId(song));
+        UnlockCache[song] = unlocked;
+        return unlocked;
     }
 
     public static int GetPrice(SongData song, CurrencyType currency)
@@ -58,8 +78,14 @@ public static class SongUnlockService
         }
 
         PlayerInventory.SetOwned(GetSongItemId(song));
+        UnlockCache[song] = true;
         WalletTransactionJournal.Record("song_purchase", currency, price, GetSongItemId(song));
         message = $"Unlocked {song.SongTitle} for {price} {currency}.";
         return true;
+    }
+
+    private static void InvalidateUnlockCache()
+    {
+        UnlockCache.Clear();
     }
 }

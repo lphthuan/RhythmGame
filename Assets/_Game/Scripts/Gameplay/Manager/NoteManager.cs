@@ -49,6 +49,10 @@ public class NoteManager : MonoBehaviour
 
     private readonly List<NoteBase> activeNotes = new List<NoteBase>();
     private readonly Dictionary<int, NoteBase> fingerToNote = new Dictionary<int, NoteBase>();
+    // Tracks physical fingers for their whole screen-contact lifetime. This is
+    // intentionally separate from fingerToNote: a finger can remain on screen
+    // after its Hold or Tap has finished.
+    private readonly HashSet<int> activeTouchFingerIds = new HashSet<int>();
 
     private Vector2 lastMousePosition;
     private const int KeyboardFingerBaseId = -2000;
@@ -246,28 +250,52 @@ public class NoteManager : MonoBehaviour
                 Time.unscaledTime
             );
 
+            // A missed Began can be recovered once, when the finger is first
+            // observed. Never recover an already-observed unbound finger:
+            // after completing a note, that would incorrectly consume later
+            // notes while the player is still holding the screen.
+            bool firstObservation = activeTouchFingerIds.Add(touch.fingerId);
+
             switch (touch.phase)
             {
                 case UnityEngine.TouchPhase.Began:
-                    PointerBegin(pointer);
+                    if (firstObservation)
+                        PointerBegin(pointer);
                     break;
 
                 case UnityEngine.TouchPhase.Moved:
-                    TryRecoverUnboundTouch(pointer);
+                    if (firstObservation)
+                        TryRecoverMissedTouchBegin(pointer);
                     PointerMove(pointer);
                     break;
 
                 case UnityEngine.TouchPhase.Stationary:
-                    TryRecoverUnboundTouch(pointer);
+                    if (firstObservation)
+                        TryRecoverMissedTouchBegin(pointer);
                     PointerStationary(pointer);
                     break;
 
                 case UnityEngine.TouchPhase.Ended:
                 case UnityEngine.TouchPhase.Canceled:
                     PointerEnd(pointer);
+                    activeTouchFingerIds.Remove(touch.fingerId);
                     break;
             }
         }
+    }
+
+    /// <summary>
+    /// Android can occasionally report a newly-added finger first as Moved or
+    /// Stationary while other fingers are already holding the screen. Recover
+    /// that unbound finger without applying an early-input penalty, because the
+    /// original Began event was not delivered.
+    /// </summary>
+    private void TryRecoverMissedTouchBegin(NotePointer pointer)
+    {
+        if (!recoverUnboundTouchDuringHold || fingerToNote.ContainsKey(pointer.fingerId))
+            return;
+
+        TryPointerBegin(pointer, false);
     }
 
 #if UNITY_EDITOR
@@ -598,17 +626,6 @@ public class NoteManager : MonoBehaviour
         }
 
         return bestNote;
-    }
-
-    private void TryRecoverUnboundTouch(NotePointer pointer)
-    {
-        if (!recoverUnboundTouchDuringHold)
-            return;
-
-        if (fingerToNote.ContainsKey(pointer.fingerId))
-            return;
-
-        TryPointerBegin(pointer, false);
     }
 
     private bool TryPunishTooEarlyInput(Vector2 screenPosition)

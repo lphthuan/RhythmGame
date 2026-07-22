@@ -18,10 +18,14 @@ public static class RuntimeGameplaySettings
     public const string TapSoundEffectKey = "TapSoundEffect";
     public const string TapSoundVolumeKey = "TapSoundVolume";
 
-    public const float DefaultNoteSpeedMultiplier = 1f;
+    public const float DefaultNoteSpeedMultiplier = 2.5f;
     public const int DefaultNoteVolumePercent = 100;
     public const int DefaultTapSoundVolumePercent = 100;
     public const int DefaultAudioOffsetMs = 0;
+    // The project now uses Unity's low-latency 256-sample Android DSP buffer.
+    // Keep the small remaining output-buffer compensation separate from the
+    // player's own visible calibration stored in PlayerPrefs.
+    public const int DefaultAndroidAudioOffsetMs = -22;
     public const int DefaultFrameRateIndex = 0;
     public const int UnlimitedFrameRate = -1;
     public const float MinNoteSpeedSetting = 1f;
@@ -29,7 +33,7 @@ public static class RuntimeGameplaySettings
     public const float MinScrollSpeed = 50f;
     public const float MaxScrollSpeed = 3500f;
     public static readonly int[] FrameRateOptions = { 60, 120, UnlimitedFrameRate };
-    public static readonly string[] FrameRateLabels = { "60 FPS", "120 FPS", "Unlimited FPS" };
+    public static readonly string[] FrameRateLabels = { "60 FPS", "120 FPS", "Display FPS (max 120)" };
 
     public static float NoteSpeedMultiplier
     {
@@ -86,6 +90,16 @@ public static class RuntimeGameplaySettings
 
     public static float AudioOffsetSeconds => AudioOffsetMs / 1000f;
 
+    public static int PlatformAudioOffsetMs =>
+        Application.platform == RuntimePlatform.Android
+            ? DefaultAndroidAudioOffsetMs
+            : 0;
+
+    public static float PlatformAudioOffsetSeconds => PlatformAudioOffsetMs / 1000f;
+
+    public static float EffectiveAudioOffsetSeconds =>
+        AudioOffsetSeconds + PlatformAudioOffsetSeconds;
+
     public static bool HeadphonesPreset
     {
         get => PlayerPrefs.GetInt(AudioPresetKey, 0) == 1;
@@ -106,10 +120,14 @@ public static class RuntimeGameplaySettings
 
     public static string FrameRateLabel => FrameRateLabels[FrameRateIndex];
 
+    // Apply these before the first scene is rendered. Previously the frame cap was
+    // only applied after a UIManager had started, so the opening scene could still
+    // inherit the QualitySettings v-sync configuration.
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
-    private static void ApplySavedAudioVolumes()
+    private static void ApplySavedRuntimeSettings()
     {
         ApplyAudioVolumes();
+        ApplyFrameRate();
     }
 
     public static void ApplyAudioVolumes()
@@ -125,10 +143,27 @@ public static class RuntimeGameplaySettings
     public static void ApplyFrameRate(int frameRateIndex)
     {
         frameRateIndex = Mathf.Clamp(frameRateIndex, 0, FrameRateOptions.Length - 1);
-        int targetFrameRate = FrameRateOptions[frameRateIndex];
+        int targetFrameRate = ResolveTargetFrameRate(FrameRateOptions[frameRateIndex]);
 
         QualitySettings.vSyncCount = 0;
         Application.targetFrameRate = targetFrameRate;
+    }
+
+    private static int ResolveTargetFrameRate(int requestedFrameRate)
+    {
+#if UNITY_ANDROID || UNITY_IOS
+        // An uncapped render loop consumes every available CPU/GPU slice, then
+        // stutters under thermal pressure. Cap this option to the physical
+        // display; a 120 Hz panel still gets a 120 FPS target.
+        if (requestedFrameRate == UnlimitedFrameRate)
+        {
+            float refreshRate = (float)Screen.currentResolution.refreshRateRatio.value;
+            int displayFrameRate = Mathf.RoundToInt(refreshRate);
+            return Mathf.Clamp(displayFrameRate > 0 ? displayFrameRate : 60, 60, 120);
+        }
+#endif
+
+        return requestedFrameRate;
     }
 
     public static void Save()

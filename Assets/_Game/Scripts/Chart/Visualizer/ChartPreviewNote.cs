@@ -14,6 +14,7 @@ public class ChartPreviewNote : MonoBehaviour
         visualizer = owner;
     }
 
+#if UNITY_EDITOR
     private void OnMouseDrag()
     {
         Vector3 mouseWorld = Camera.main.ScreenToWorldPoint(Input.mousePosition);
@@ -23,4 +24,5 @@ public class ChartPreviewNote : MonoBehaviour
 
         visualizer.UpdateNoteFromPreview(this);
     }
+#endif
 }

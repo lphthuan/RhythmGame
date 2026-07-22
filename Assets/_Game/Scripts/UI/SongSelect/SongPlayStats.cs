@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>Small local cache for the latest and best result shown on the song-selection screen.</summary>
@@ -6,6 +7,11 @@ public readonly struct SongPlayStats
     public readonly int LastScore;
     public readonly int BestScore;
     public readonly string BestRank;
+
+    // The carousel reads this every frame for every visible card. Cache by the
+    // actual ScriptableObject reference and difficulty so that scrolling does
+    // not repeatedly build PlayerPrefs keys or allocate strings.
+    private static readonly Dictionary<StatCacheKey, SongPlayStats> Cache = new();
 
     private SongPlayStats(int lastScore, int bestScore, string bestRank)
     {
@@ -21,6 +27,22 @@ public readonly struct SongPlayStats
     }
 
     public static SongPlayStats Load(SongData song, Difficulty difficulty)
+    {
+        if (song != null)
+        {
+            StatCacheKey cacheKey = new(song, difficulty);
+            if (Cache.TryGetValue(cacheKey, out SongPlayStats cached))
+                return cached;
+
+            SongPlayStats loaded = LoadUncached(song, difficulty);
+            Cache[cacheKey] = loaded;
+            return loaded;
+        }
+
+        return LoadUncached(null, difficulty);
+    }
+
+    private static SongPlayStats LoadUncached(SongData song, Difficulty difficulty)
     {
         string key = GetKey(song, difficulty);
         return new SongPlayStats(
@@ -49,6 +71,27 @@ public readonly struct SongPlayStats
             PlayerPrefs.SetString(key + ".rank", rank);
         }
         PlayerPrefs.Save();
+
+        Cache[new StatCacheKey(song, difficulty)] = new SongPlayStats(
+            score,
+            PlayerPrefs.GetInt(key + ".best", 0),
+            PlayerPrefs.GetString(key + ".rank", string.Empty));
+    }
+
+    private readonly struct StatCacheKey : System.IEquatable<StatCacheKey>
+    {
+        private readonly SongData song;
+        private readonly Difficulty difficulty;
+
+        public StatCacheKey(SongData song, Difficulty difficulty)
+        {
+            this.song = song;
+            this.difficulty = difficulty;
+        }
+
+        public bool Equals(StatCacheKey other) => song == other.song && difficulty == other.difficulty;
+        public override bool Equals(object obj) => obj is StatCacheKey other && Equals(other);
+        public override int GetHashCode() => unchecked(((song != null ? song.GetInstanceID() : 0) * 397) ^ (int)difficulty);
     }
 
     private static string GetKey(SongData song)

@@ -2,7 +2,6 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using System.Collections;
-using UnityEngine.InputSystem;
 
 public class UIManager : MonoBehaviour
 {
@@ -111,7 +110,8 @@ public class UIManager : MonoBehaviour
     {
         UpdateNoteSpeedPreview();
 
-        if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
+#if ENABLE_LEGACY_INPUT_MANAGER
+        if (Input.GetKeyDown(KeyCode.Escape))
         {
             if (gameplayPanel != null && gameplayPanel.activeSelf)
             {
@@ -126,6 +126,7 @@ public class UIManager : MonoBehaviour
                 }
             }
         }
+#endif
     }
 
     // --- CHUYỂN ĐỔI STATE TRÒ CHƠI ---
