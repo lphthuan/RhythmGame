@@ -23,7 +23,12 @@ public class HoldNote : NoteBase
     private float baseVisualHeight;
     private float runtimeHitlineY;
     private float runtimeScrollSpeed;
+    private float runtimeLaneSpacing;
     private float nextSustainEffectTime;
+    private Image skinHeadImage;
+    private Image skinBodyImage;
+    private Image skinTailImage;
+    private bool usesSegmentedSkin;
 
     protected override void Awake()
     {
@@ -39,6 +44,7 @@ public class HoldNote : NoteBase
         judgmentEffectShown = false;
         runtimeHitlineY = data.hitlineY;
         runtimeScrollSpeed = data.scrollSpeed;
+        runtimeLaneSpacing = data.laneSpacing;
         nextSustainEffectTime = 0f;
 
         CacheBaseVisualSize();
@@ -48,6 +54,8 @@ public class HoldNote : NoteBase
         SetHoldFillColor(Color.yellow);
 
         SetColor(Color.white);
+        NoteSkinService.ApplyTo(this);
+        UpdateSegmentedSkinLayout();
     }
 
     public override void ApplyScrollSpeed(float newScrollSpeed)
@@ -61,6 +69,7 @@ public class HoldNote : NoteBase
             ApplyDurationVisual(newScrollSpeed);
 
         SetHoldProgress(stateMachine.IsHolding() ? 1f : stateMachine.Progress01);
+        UpdateSegmentedSkinLayout();
     }
 
     public override void OnPointerBegin(NotePointer pointer)
@@ -308,6 +317,7 @@ public class HoldNote : NoteBase
 
         rectTransform.pivot = new Vector2(0.5f, 0f);
         rectTransform.sizeDelta = new Vector2(baseVisualWidth, baseVisualHeight + durationHeight);
+        UpdateSegmentedSkinLayout();
     }
 
     private void ApplyRemainingDurationVisual(float currentTime)
@@ -328,6 +338,7 @@ public class HoldNote : NoteBase
         rectTransform.pivot = new Vector2(0.5f, 0f);
         rectTransform.anchoredPosition = new Vector2(rectTransform.anchoredPosition.x, runtimeHitlineY);
         rectTransform.sizeDelta = new Vector2(baseVisualWidth, baseVisualHeight + remainingHeight);
+        UpdateSegmentedSkinLayout();
     }
 
     private void CacheBaseVisualSize()
@@ -369,5 +380,74 @@ public class HoldNote : NoteBase
 
         nextSustainEffectTime = currentTime + sustainEffectInterval;
         owner.NotifySustainEffect(this);
+    }
+
+    /// <summary>Uses osu!mania's separate hold head/body/tail without stretching the head sprite.</summary>
+    public void ApplySkinSprites(Sprite head, Sprite body, Sprite tail)
+    {
+        if (head == null || body == null || tail == null)
+            return;
+
+        CreateSegmentedSkinVisuals();
+        usesSegmentedSkin = true;
+        if (runtimeLaneSpacing > 0f)
+        {
+            baseVisualWidth = Mathf.Max(54f, runtimeLaneSpacing * 0.66f);
+            baseVisualHeight = baseVisualWidth;
+            ApplyDurationVisual(runtimeScrollSpeed);
+        }
+        if (noteImage != null)
+            noteImage.enabled = false;
+        if (holdFillImage != null)
+            holdFillImage.enabled = false;
+
+        skinHeadImage.sprite = head;
+        skinBodyImage.sprite = body;
+        skinTailImage.sprite = tail;
+        skinHeadImage.color = skinBodyImage.color = skinTailImage.color = Color.white;
+        UpdateSegmentedSkinLayout();
+    }
+
+    private void CreateSegmentedSkinVisuals()
+    {
+        if (skinHeadImage != null)
+            return;
+
+        skinHeadImage = CreateSegment("SKIN_HOLD_HEAD", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f));
+        skinBodyImage = CreateSegment("SKIN_HOLD_BODY", Vector2.zero, Vector2.one, new Vector2(0.5f, 0f));
+        skinTailImage = CreateSegment("SKIN_HOLD_TAIL", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f));
+    }
+
+    private Image CreateSegment(string name, Vector2 anchorMin, Vector2 anchorMax, Vector2 pivot)
+    {
+        GameObject go = new GameObject(name, typeof(RectTransform), typeof(Image));
+        RectTransform rect = go.GetComponent<RectTransform>();
+        rect.SetParent(transform, false);
+        rect.anchorMin = anchorMin;
+        rect.anchorMax = anchorMax;
+        rect.pivot = pivot;
+        Image image = go.GetComponent<Image>();
+        image.raycastTarget = false;
+        image.preserveAspect = false;
+        return image;
+    }
+
+    private void UpdateSegmentedSkinLayout()
+    {
+        if (!usesSegmentedSkin || rectTransform == null || skinHeadImage == null)
+            return;
+
+        float width = Mathf.Max(1f, rectTransform.rect.width);
+        float capHeight = Mathf.Min(Mathf.Max(1f, baseVisualHeight), rectTransform.rect.height * 0.5f);
+        RectTransform head = skinHeadImage.rectTransform;
+        RectTransform body = skinBodyImage.rectTransform;
+        RectTransform tail = skinTailImage.rectTransform;
+
+        head.sizeDelta = new Vector2(width, capHeight);
+        head.anchoredPosition = Vector2.zero;
+        tail.sizeDelta = new Vector2(width, capHeight);
+        tail.anchoredPosition = Vector2.zero;
+        body.offsetMin = new Vector2(0f, capHeight);
+        body.offsetMax = new Vector2(0f, -capHeight);
     }
 }

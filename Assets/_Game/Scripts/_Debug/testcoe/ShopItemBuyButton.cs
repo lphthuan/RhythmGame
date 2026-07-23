@@ -36,12 +36,34 @@ public class ShopItemBuyButton : MonoBehaviour
 
     public void BuyWithDiamond()
     {
+        if (IsDefaultNightSky())
+        {
+            ApplyDefaultNightSky();
+            return;
+        }
         ShowBuyConfirm("Diamond");
     }
 
     public void BuyWithCoin()
     {
+        if (IsDefaultNightSky())
+        {
+            ApplyDefaultNightSky();
+            return;
+        }
         ShowBuyConfirm("Coin");
+    }
+
+    private bool IsDefaultNightSky()
+    {
+        return itemTitleText != null && itemTitleText.text.Trim().Equals("Night Sky", System.StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void ApplyDefaultNightSky()
+    {
+        NoteSkinService.TryEquip(NoteSkinService.NightSkyId, out string message);
+        PurchaseConfirmPopup popup = PurchaseConfirmPopup.GetOrCreate(purchasePopupPrefab, this);
+        if (popup != null) popup.ShowMessage(message);
     }
 
     private void ShowBuyConfirm(string currency)
@@ -111,8 +133,23 @@ public class ShopItemBuyButton : MonoBehaviour
 
     private void RefreshOwnedState()
     {
+        if (IsDefaultNightSky())
+        {
+            if (lockedOverlay != null) lockedOverlay.SetActive(false);
+            if (priceRow != null) priceRow.SetActive(true);
+            SetButtonLabel(diamondBuyButton, "APPLY");
+            SetButtonLabel(coinBuyButton, "APPLY");
+            return;
+        }
+
         bool owned = OwnedItems.IsOwned(ItemId);
         if (lockedOverlay != null) lockedOverlay.SetActive(!owned);
         if (priceRow != null) priceRow.SetActive(!owned);
+    }
+
+    private static void SetButtonLabel(Button button, string value)
+    {
+        TMP_Text label = button != null ? button.GetComponentInChildren<TMP_Text>(true) : null;
+        if (label != null) label.text = value;
     }
 }

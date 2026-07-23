@@ -1,4 +1,6 @@
 #if UNITY_EDITOR
+using System;
+using System.Collections.Generic;
 using System.IO;
 using Dypsloom.RhythmTimeline.Core;
 using UnityEditor;
@@ -462,12 +464,112 @@ public class SongImportWindow : EditorWindow
 
     private static string BuildChartFileName(OsuManiaBeatmapParser.ImportResult result)
     {
-        string source = !string.IsNullOrWhiteSpace(result.AudioFileName)
-            ? Path.GetFileNameWithoutExtension(result.AudioFileName)
-            : result.Chart.songName;
+        return BuildChartFileName(
+            BuildSongGroupId(result),
+            GuessDifficulty(result.Version));
+    }
 
-        string difficulty = GetDifficultyFileSuffix(GuessDifficulty(result.Version));
-        return "chart_" + SongData.SanitizeForFileName(source) + "_" + difficulty;
+    private static string BuildChartFileName(string songGroupId, Difficulty difficulty)
+    {
+        string safeGroupId = SongData.SanitizeForFileName(songGroupId);
+        return "chart_" + safeGroupId + "_" + GetDifficultyFileSuffix(difficulty);
+    }
+
+    [MenuItem("Tools/Rhythm Game/Repair Imported Song Chart Names")]
+    private static void RepairImportedSongChartNames()
+    {
+        string[] songGuids = AssetDatabase.FindAssets("t:SongData", new[] { SongDataFolder });
+        List<SongData> songs = new List<SongData>();
+        Dictionary<string, int> chartNameCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (string guid in songGuids)
+        {
+            SongData song = AssetDatabase.LoadAssetAtPath<SongData>(AssetDatabase.GUIDToAssetPath(guid));
+            if (song == null)
+                continue;
+
+            songs.Add(song);
+            CountChartName(chartNameCounts, song.easyChartFileName);
+            CountChartName(chartNameCounts, song.normalChartFileName);
+            CountChartName(chartNameCounts, song.hardChartFileName);
+        }
+
+        int repairedSlots = 0;
+        int recreatedCharts = 0;
+
+        foreach (SongData song in songs)
+        {
+            repairedSlots += RepairChartSlot(song, Difficulty.Easy, chartNameCounts, ref recreatedCharts);
+            repairedSlots += RepairChartSlot(song, Difficulty.Medium, chartNameCounts, ref recreatedCharts);
+            repairedSlots += RepairChartSlot(song, Difficulty.Hard, chartNameCounts, ref recreatedCharts);
+        }
+
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        Debug.Log($"SongImportWindow: Repaired {repairedSlots} duplicate/generic chart name slot(s) and recreated {recreatedCharts} JSON chart(s) from their assigned timelines.");
+    }
+
+    private static void CountChartName(Dictionary<string, int> counts, string chartFileName)
+    {
+        if (string.IsNullOrWhiteSpace(chartFileName))
+            return;
+
+        counts.TryGetValue(chartFileName, out int count);
+        counts[chartFileName] = count + 1;
+    }
+
+    private static int RepairChartSlot(
+        SongData song,
+        Difficulty difficulty,
+        Dictionary<string, int> chartNameCounts,
+        ref int recreatedCharts)
+    {
+        string currentName = song.GetChartFileName(difficulty);
+        if (string.IsNullOrWhiteSpace(currentName))
+            return 0;
+
+        bool isGenericAudioName = currentName.StartsWith("chart_audio", StringComparison.OrdinalIgnoreCase);
+        bool isDuplicate = chartNameCounts.TryGetValue(currentName, out int count) && count > 1;
+        if (!isGenericAudioName && !isDuplicate)
+            return 0;
+
+        RhythmTimelineAsset timeline = song.GetTimelineAsset(difficulty);
+        if (timeline == null)
+        {
+            Debug.LogWarning($"SongImportWindow: Cannot repair '{song.SongTitle}' ({difficulty}) because it has no timeline asset.");
+            return 0;
+        }
+
+        string groupId = string.IsNullOrWhiteSpace(song.songGroupId)
+            ? song.SongTitle
+            : song.songGroupId;
+        string repairedName = BuildChartFileName(groupId, difficulty);
+        SetChartFileName(song, difficulty, repairedName);
+
+        if (ChartSpawnDataProvider.TryGetChartAndSpawnData(timeline, out ChartData chart, out _))
+        {
+            ChartSaveLoad.Save(chart, repairedName);
+            recreatedCharts++;
+        }
+
+        EditorUtility.SetDirty(song);
+        return 1;
+    }
+
+    private static void SetChartFileName(SongData song, Difficulty difficulty, string chartFileName)
+    {
+        switch (difficulty)
+        {
+            case Difficulty.Easy:
+                song.easyChartFileName = chartFileName;
+                break;
+            case Difficulty.Hard:
+                song.hardChartFileName = chartFileName;
+                break;
+            default:
+                song.normalChartFileName = chartFileName;
+                break;
+        }
     }
 
     private static AudioClip ImportAudio(OsuManiaBeatmapParser.ImportResult result, string songGroupId)

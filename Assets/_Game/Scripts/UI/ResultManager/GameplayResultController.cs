@@ -111,6 +111,9 @@ public class GameplayResultController : MonoBehaviour
         WireResultButtons();
         SongData selectedSong = SelectedSongManager.Instance != null ? SelectedSongManager.Instance.SelectedSong : null;
         SongPlayStats.Save(selectedSong, result);
+        int totalNotes = Mathf.Max(1, chartSpawner != null ? chartSpawner.TotalNoteCount : _perfect + _great + _good + _miss);
+        bool isAllPerfect = result.passed && _perfect == totalNotes && _great == 0 && _good == 0 && _miss == 0;
+        DailyQuestService.RecordResult(result.passed, isAllPerfect);
         int moneyReward = SongClearRewardService.GrantForClear(selectedSong, result);
         ResultSongBackdrop.Apply(resultOverlay, result, moneyReward);
         resultPro.Show(result);

@@ -53,6 +53,9 @@ public class NoteManager : MonoBehaviour
     // intentionally separate from fingerToNote: a finger can remain on screen
     // after its Hold or Tap has finished.
     private readonly HashSet<int> activeTouchFingerIds = new HashSet<int>();
+    // Fingers that first touched the screen while paused must be lifted before
+    // they can judge a note. This prevents a paused tap becoming a free hit.
+    private readonly HashSet<int> blockedTouchFingerIds = new HashSet<int>();
 
     private Vector2 lastMousePosition;
     private const int KeyboardFingerBaseId = -2000;
@@ -94,6 +97,12 @@ public class NoteManager : MonoBehaviour
         }
 
         TickNotes();
+
+        if (GameplayInputGate.IsBlocked)
+        {
+            RememberTouchesStartedWhileBlocked();
+            return;
+        }
 
         // Xử lý input trước AutoMiss để tránh trường hợp:
         // note vừa qua window → bị miss trước → người chơi bấm cùng frame nhưng không ăn.
@@ -243,6 +252,13 @@ public class NoteManager : MonoBehaviour
         {
             Touch touch = Input.GetTouch(i);
 
+            if (blockedTouchFingerIds.Contains(touch.fingerId))
+            {
+                if (touch.phase == UnityEngine.TouchPhase.Ended || touch.phase == UnityEngine.TouchPhase.Canceled)
+                    blockedTouchFingerIds.Remove(touch.fingerId);
+                continue;
+            }
+
             NotePointer pointer = new NotePointer(
                 touch.fingerId,
                 touch.position,
@@ -282,6 +298,12 @@ public class NoteManager : MonoBehaviour
                     break;
             }
         }
+    }
+
+    private void RememberTouchesStartedWhileBlocked()
+    {
+        for (int i = 0; i < Input.touchCount; i++)
+            blockedTouchFingerIds.Add(Input.GetTouch(i).fingerId);
     }
 
     /// <summary>

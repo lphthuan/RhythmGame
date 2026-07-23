@@ -98,6 +98,11 @@ public abstract class NoteBase : MonoBehaviour
             movement.Initialize(data);
 
         ResetVisual();
+
+        // Hold creates its secondary visual objects after this base method.
+        // Applying its skin here would dereference that not-yet-created state.
+        if (this is not HoldNote)
+            NoteSkinService.ApplyTo(this);
     }
 
     public void SetOwner(NoteManager manager)
@@ -237,5 +242,21 @@ public abstract class NoteBase : MonoBehaviour
 
         if (rectTransform != null && style.uiSize.x > 0f && style.uiSize.y > 0f)
             rectTransform.sizeDelta = style.uiSize;
+    }
+
+    public virtual void ApplySkinSprite(Sprite sprite)
+    {
+        if (sprite == null)
+            return;
+
+        if (noteImage == null)
+            noteImage = GetComponent<Image>();
+
+        if (noteImage != null)
+        {
+            noteImage.sprite = sprite;
+            noteImage.preserveAspect = true;
+            noteImage.color = Color.white;
+        }
     }
 }

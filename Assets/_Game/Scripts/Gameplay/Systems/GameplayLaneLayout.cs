@@ -32,6 +32,7 @@ public class GameplayLaneLayout : MonoBehaviour
     [SerializeField, Range(0.75f, 1.25f)] private float hitHintWidthRatio = 1.04f;
     [SerializeField] private float verticalBleed = 96f;
 
+
     [Header("Debug")]
     [SerializeField] private float appliedLaneSpacing;
     [SerializeField] private float appliedHitlineY;
@@ -140,13 +141,15 @@ public class GameplayLaneLayout : MonoBehaviour
         float firstLaneX = -((activeLaneCount - 1) * appliedLaneSpacing) * 0.5f;
         float laneBandWidth = activeLaneCount * appliedLaneSpacing;
         float stageHeight = canvasSize.y + verticalBleed * 2f;
-        float sideWidth = Mathf.Clamp(appliedLaneSpacing * 0.28f, 36f, 62f);
-        float stageWidth = laneBandWidth + sideWidth * 2f;
-        float sideX = laneBandWidth * 0.5f + sideWidth * 0.5f;
+        float leftSideWidth = Mathf.Clamp(appliedLaneSpacing * 0.28f, 36f, 62f);
+        float rightSideWidth = leftSideWidth;
+        float stageWidth = laneBandWidth + leftSideWidth + rightSideWidth;
+        float leftSideX = laneBandWidth * 0.5f + leftSideWidth * 0.5f;
+        float rightSideX = laneBandWidth * 0.5f + rightSideWidth * 0.5f;
 
         SetRect(stageShade, new Vector2(stageWidth, stageHeight), Vector2.zero);
-        SetRect(stageLeft, new Vector2(sideWidth, stageHeight), new Vector2(-sideX, 0f));
-        SetRect(stageRight, new Vector2(sideWidth, stageHeight), new Vector2(sideX, 0f));
+        SetRect(stageLeft, new Vector2(leftSideWidth, stageHeight), new Vector2(-leftSideX, 0f));
+        SetRect(stageRight, new Vector2(rightSideWidth, stageHeight), new Vector2(rightSideX, 0f));
         SetRect(hitHint, new Vector2(laneBandWidth * hitHintWidthRatio, Mathf.Max(22f, appliedLaneSpacing * 0.16f)),
             new Vector2(0f, appliedHitlineY + Mathf.Max(12f, appliedLaneSpacing * 0.12f)));
 
@@ -163,8 +166,9 @@ public class GameplayLaneLayout : MonoBehaviour
 
             if (laneBottoms != null && i < laneBottoms.Length)
             {
+                float targetSize = Mathf.Max(24f, appliedLaneSpacing * 0.18f);
                 SetRect(laneBottoms[i],
-                    new Vector2(appliedLaneSpacing * laneBottomWidthRatio, Mathf.Max(24f, appliedLaneSpacing * 0.18f)),
+                    new Vector2(appliedLaneSpacing * laneBottomWidthRatio, targetSize),
                     new Vector2(laneX, appliedHitlineY));
             }
         }
@@ -259,6 +263,34 @@ public class GameplayLaneLayout : MonoBehaviour
         laneIndex = nearestLane;
         distanceToLaneCenter = nearestDistance;
         return true;
+    }
+
+    public void ApplySkinSprites(Sprite left, Sprite right, Sprite hint, Sprite bottom, Sprite light)
+    {
+        ApplySprite(stageLeft, left);
+        ApplySprite(stageRight, right);
+        ApplySprite(hitHint, hint);
+
+        foreach (RectTransform laneBottom in laneBottoms)
+            ApplySprite(laneBottom, bottom);
+        // mania-stage-light is a transient glow, not a repeating lane texture.
+        // Stretching it through every lane produced the four opaque bars seen
+        // in gameplay, so lane lights deliberately keep their native effect.
+        ApplyLayout();
+    }
+
+    private static void ApplySprite(RectTransform target, Sprite sprite)
+    {
+        if (target == null || sprite == null)
+            return;
+
+        Image image = target.GetComponent<Image>();
+        if (image != null)
+        {
+            image.sprite = sprite;
+            image.preserveAspect = false;
+            image.color = Color.white;
+        }
     }
 
     private void ResolveReferences()

@@ -53,6 +53,7 @@ public class GameplayPauseController : MonoBehaviour
             return;
 
         _paused = true;
+        GameplayInputGate.SetBlocked(true);
         Time.timeScale = 0f;
         playbackClock?.Pause();
 
@@ -97,12 +98,14 @@ public class GameplayPauseController : MonoBehaviour
         _resumeCoroutine = null;
         Time.timeScale = 1f;
         playbackClock?.Play();
+        GameplayInputGate.SetBlocked(false);
     }
 
     public void RetryGame()
     {
         StopResumeCountdownIfNeeded();
         Time.timeScale = 1f;
+        GameplayInputGate.SetBlocked(false);
         playbackClock?.Stop();
         SceneLoadUtility.ReloadActiveScene();
     }
@@ -111,6 +114,7 @@ public class GameplayPauseController : MonoBehaviour
     {
         StopResumeCountdownIfNeeded();
         Time.timeScale = 1f;
+        GameplayInputGate.SetBlocked(false);
         playbackClock?.Stop();
         SceneLoadUtility.LoadSceneByName(songSelectSceneName);
     }
@@ -119,12 +123,14 @@ public class GameplayPauseController : MonoBehaviour
     {
         if (_paused || _resuming)
             Time.timeScale = 1f;
+        GameplayInputGate.SetBlocked(false);
     }
 
     private void OnDestroy()
     {
         if (_paused || _resuming)
             Time.timeScale = 1f;
+        GameplayInputGate.SetBlocked(false);
     }
 
     private void StopResumeCountdownIfNeeded()

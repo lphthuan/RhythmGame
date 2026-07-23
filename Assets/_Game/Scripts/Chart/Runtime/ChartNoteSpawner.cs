@@ -117,6 +117,7 @@ public class ChartNoteSpawner : MonoBehaviour
     private void Start()
     {
         LoadPersistedScrollSpeed();
+        IsolateMovingNotesCanvas();
         GameplaySongBackdrop.Apply();
         EnsureGameplayUi();
 
@@ -343,6 +344,27 @@ public class ChartNoteSpawner : MonoBehaviour
             SpawnNote(data);
             _nextSpawnIndex++;
         }
+    }
+
+    /// <summary>
+    /// Moving UI notes must not invalidate the static background/HUD canvas
+    /// every frame.  A nested canvas confines rebuild work to the note layer.
+    /// This is especially important for 90/120 Hz Android rendering.
+    /// </summary>
+    private void IsolateMovingNotesCanvas()
+    {
+        if (noteParent == null || noteParent.GetComponent<Canvas>() != null)
+            return;
+
+        Canvas parentCanvas = noteParent.GetComponentInParent<Canvas>();
+        if (parentCanvas == null)
+            return;
+
+        Canvas noteCanvas = noteParent.gameObject.AddComponent<Canvas>();
+        noteCanvas.overrideSorting = true;
+        noteCanvas.sortingLayerID = parentCanvas.sortingLayerID;
+        noteCanvas.sortingOrder = parentCanvas.sortingOrder + 1;
+        noteCanvas.additionalShaderChannels = parentCanvas.additionalShaderChannels;
     }
 
     private float GetPreSpawnTime()
