@@ -30,7 +30,7 @@ public class AuthManager : MonoBehaviour
     public TextMeshProUGUI messageText;
 
     // ???ng d?n k?t n?i tr?c ti?p t?i c?ng HTTP th??ng, lo?i b? ho�n to�n l?i ng?t k?t n?i HTTPS
-    private string baseURL = "http://localhost:5231/api/auth/";
+    private string baseURL = "https://api.rhythmgame.id.vn/api/Auth/";
 
 private void Start()
     {
@@ -224,7 +224,7 @@ private void Start()
     void ShowSuccess(string msg) { if (messageText == null) return; messageText.text = msg; messageText.color = Color.green; }
     void ShowError(string msg) { if (messageText == null) return; messageText.text = msg; messageText.color = Color.red; }
     void ClearMessage() { if (messageText != null) messageText.text = ""; }
-    void LoadGameplayScene() { SceneManager.LoadScene("MainMenu"); }
+    void LoadGameplayScene() { SceneManager.LoadScene("SongSelect"); }
 }
 
 // ================= C�C L?P ??I T??NG DATA CHUY?N ??I JSON =================
