@@ -3,7 +3,7 @@ using System;
 /// <summary>
 /// Một entry trong bảng xếp hạng cục bộ.
 /// Mỗi lần chơi xong, một entry được thêm vào leaderboard.json.
-/// Top 10 per song-difficulty được giữ lại, phần còn lại bị loại.
+/// Top 50 per song-difficulty được giữ lại, phần còn lại bị loại.
 /// </summary>
 [Serializable]
 public class LeaderboardEntry

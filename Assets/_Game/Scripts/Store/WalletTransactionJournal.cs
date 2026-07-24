@@ -8,7 +8,7 @@ using UnityEngine;
 /// </summary>
 public static class WalletTransactionJournal
 {
-    private const string StorageKey = "RhythmGame.Wallet.TransactionJournal";
+    private const string StorageKey = "Wallet.TransactionJournal";
     private const int MaximumEntries = 100;
 
     [Serializable]
@@ -48,7 +48,7 @@ public static class WalletTransactionJournal
         if (excess > 0)
             collection.entries.RemoveRange(0, excess);
 
-        PlayerPrefs.SetString(StorageKey, JsonUtility.ToJson(collection));
+        PlayerPrefs.SetString(AccountSession.ScopedKey(StorageKey), JsonUtility.ToJson(collection));
         PlayerPrefs.Save();
     }
 
@@ -59,7 +59,7 @@ public static class WalletTransactionJournal
 
     private static EntryCollection Load()
     {
-        string json = PlayerPrefs.GetString(StorageKey, string.Empty);
+        string json = PlayerPrefs.GetString(AccountSession.ScopedKey(StorageKey), string.Empty);
         if (string.IsNullOrWhiteSpace(json))
             return new EntryCollection();
 

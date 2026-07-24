@@ -15,7 +15,8 @@ public class LocalLeaderboardManager : MonoBehaviour, ILeaderboardProvider
     [Tooltip("Chọn backend để lưu leaderboard")]
     [SerializeField] private SaveBackend _backend = SaveBackend.ES3;
 
-    private const int MAX_PER_SONG = 10;
+    // The Song Select panel presents a scrollable Top 50 for each chart.
+    private const int MAX_PER_SONG = 50;
     private ISaveProvider _provider;
     private LeaderboardData _data;
 

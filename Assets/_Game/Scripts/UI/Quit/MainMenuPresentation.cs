@@ -139,9 +139,16 @@ public class MainMenuPresentation : MonoBehaviour
 
         CreateTitle(root);
         CreateRhythmSignature(root);
-        string[] labels = { "START", "SETTING", "SHOP", "EXIT" };
-        UnityEngine.Events.UnityAction[] actions = { StartGame, OpenSettings, OpenShop, QuitGame };
-        float[] y = { 105f, 15f, -75f, -165f };
+        bool signedIn = AccountSession.IsSignedIn;
+        // A guest can play immediately.  Login belongs in the same fourth slot as
+        // Log Out for a signed-in player, rather than replacing the primary Play button.
+        string[] labels = signedIn
+            ? new[] { "START", "SETTING", "SHOP", "LOG OUT", "EXIT" }
+            : new[] { "PLAY", "SETTING", "SHOP", "LOGIN", "EXIT" };
+        UnityEngine.Events.UnityAction[] actions = signedIn
+            ? new UnityEngine.Events.UnityAction[] { StartGame, OpenSettings, OpenShop, SignOut, QuitGame }
+            : new UnityEngine.Events.UnityAction[] { StartGame, OpenSettings, OpenShop, OpenLogin, QuitGame };
+        float[] y = { 145f, 55f, -35f, -125f, -215f };
         for (int i = 0; i < labels.Length; i++)
             CreateGothicButton(root, labels[i], y[i], i == 0, actions[i], i * 0.09f, i + 1);
     }
@@ -261,8 +268,14 @@ public class MainMenuPresentation : MonoBehaviour
     }
 
     private static void StartGame() => SceneLoadUtility.LoadSceneByName("SongSelect");
+    private static void OpenLogin() => SceneLoadUtility.LoadSceneByName("Register");
     private void OpenSettings() { if (settingsManager == null) FindSettingsManager(); if (settingsManager != null) { settingsManager.PrepareAsSettingsOverlay(); settingsManager.OpenSettings(); } }
     private static void OpenShop() => SceneLoadUtility.LoadSceneByName("StoreMenu");
+    private static void SignOut()
+    {
+        AccountSession.SignOut();
+        SceneLoadUtility.LoadSceneByName("Register");
+    }
     private static void QuitGame()
     {
         Debug.Log("Thanks for playing!");

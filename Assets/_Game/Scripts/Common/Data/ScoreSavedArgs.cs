@@ -16,6 +16,7 @@ public class ScoreSavedArgs
     public int       Score;
     public float     Accuracy;     // 0.0 → 1.0
     public string    Rank;         // "S", "A", "B", "C", "D", "F"
+    public int       MaxCombo;
     public bool      IsAllPerfect;
     public bool      IsNewHighScore;
 }

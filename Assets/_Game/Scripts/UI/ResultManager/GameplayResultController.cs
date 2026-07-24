@@ -113,6 +113,14 @@ public class GameplayResultController : MonoBehaviour
         SongPlayStats.Save(selectedSong, result);
         int totalNotes = Mathf.Max(1, chartSpawner != null ? chartSpawner.TotalNoteCount : _perfect + _great + _good + _miss);
         bool isAllPerfect = result.passed && _perfect == totalNotes && _great == 0 && _good == 0 && _miss == 0;
+        if (selectedSong != null && SaveManager.Instance != null)
+        {
+            float accuracy = (_perfect + _great * 0.75f + _good * 0.5f) / totalNotes;
+            int score = Mathf.RoundToInt(accuracy * 1000000f);
+            string songGroupId = string.IsNullOrWhiteSpace(selectedSong.songGroupId) ? selectedSong.name : selectedSong.songGroupId;
+            Difficulty difficulty = SelectedSongManager.Instance != null ? SelectedSongManager.Instance.SelectedDifficulty : selectedSong.difficultyLevel;
+            SaveManager.Instance.SaveResult(songGroupId, difficulty, score, accuracy, isAllPerfect, result.maxCombo);
+        }
         DailyQuestService.RecordResult(result.passed, isAllPerfect);
         int moneyReward = SongClearRewardService.GrantForClear(selectedSong, result);
         ResultSongBackdrop.Apply(resultOverlay, result, moneyReward);

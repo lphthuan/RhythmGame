@@ -7,13 +7,18 @@ using UnityEngine;
 /// </summary>
 public static class PlayerWallet
 {
-    private const string MoneyKey = "RhythmGame.Wallet.Money";
-    private const string DiamondKey = "RhythmGame.Wallet.Diamond";
+    private const string MoneyKey = "Wallet.Money";
+    private const string DiamondKey = "Wallet.Diamond";
 
     public static event Action Changed;
 
-    public static int Money => PlayerPrefs.GetInt(MoneyKey, 0);
-    public static int Diamond => PlayerPrefs.GetInt(DiamondKey, 0);
+    static PlayerWallet()
+    {
+        AccountSession.Changed += NotifyChanged;
+    }
+
+    public static int Money => PlayerPrefs.GetInt(AccountSession.ScopedKey(MoneyKey), 0);
+    public static int Diamond => PlayerPrefs.GetInt(AccountSession.ScopedKey(DiamondKey), 0);
 
     public static bool CanSpend(CurrencyType currency, int amount)
     {
@@ -40,8 +45,8 @@ public static class PlayerWallet
 
     public static void ResetForTesting()
     {
-        PlayerPrefs.DeleteKey(MoneyKey);
-        PlayerPrefs.DeleteKey(DiamondKey);
+        PlayerPrefs.DeleteKey(AccountSession.ScopedKey(MoneyKey));
+        PlayerPrefs.DeleteKey(AccountSession.ScopedKey(DiamondKey));
         PlayerPrefs.Save();
         Changed?.Invoke();
     }
@@ -53,8 +58,11 @@ public static class PlayerWallet
 
     private static void SetBalance(CurrencyType currency, int value)
     {
-        PlayerPrefs.SetInt(currency == CurrencyType.Diamond ? DiamondKey : MoneyKey, Mathf.Max(0, value));
+        string key = currency == CurrencyType.Diamond ? DiamondKey : MoneyKey;
+        PlayerPrefs.SetInt(AccountSession.ScopedKey(key), Mathf.Max(0, value));
         PlayerPrefs.Save();
         Changed?.Invoke();
     }
+
+    private static void NotifyChanged() => Changed?.Invoke();
 }

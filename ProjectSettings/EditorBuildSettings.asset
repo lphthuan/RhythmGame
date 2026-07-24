@@ -6,6 +6,9 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
+    path: Assets/_Game/Scenes/Sandbox/ptDuy/Register.unity
+    guid: e43188a2ef78d1a4cb62b86606dd593e
+  - enabled: 1
     path: Assets/_Game/Scenes/Sandbox/HaoThongThinh/StartMenu.unity
     guid: 1d52fa1532d4e184bb308b6831878f45
   - enabled: 1

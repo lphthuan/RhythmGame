@@ -6,16 +6,21 @@ using UnityEngine;
 /// </summary>
 public static class PlayerInventory
 {
-    private const string OwnedPrefix = "RhythmGame.Inventory.Owned.";
+    private const string OwnedPrefix = "Inventory.Owned.";
 
     public static event Action Changed;
+
+    static PlayerInventory()
+    {
+        AccountSession.Changed += NotifyChanged;
+    }
 
     public static bool IsOwned(string itemId)
     {
         if (string.IsNullOrWhiteSpace(itemId))
             return false;
 
-        return PlayerPrefs.GetInt(OwnedPrefix + itemId, 0) == 1;
+        return PlayerPrefs.GetInt(AccountSession.ScopedKey(OwnedPrefix + itemId), 0) == 1;
     }
 
     public static void SetOwned(string itemId)
@@ -23,7 +28,7 @@ public static class PlayerInventory
         if (string.IsNullOrWhiteSpace(itemId))
             return;
 
-        PlayerPrefs.SetInt(OwnedPrefix + itemId, 1);
+        PlayerPrefs.SetInt(AccountSession.ScopedKey(OwnedPrefix + itemId), 1);
         PlayerPrefs.Save();
         Changed?.Invoke();
     }
@@ -33,8 +38,10 @@ public static class PlayerInventory
         if (string.IsNullOrWhiteSpace(itemId))
             return;
 
-        PlayerPrefs.DeleteKey(OwnedPrefix + itemId);
+        PlayerPrefs.DeleteKey(AccountSession.ScopedKey(OwnedPrefix + itemId));
         PlayerPrefs.Save();
         Changed?.Invoke();
     }
+
+    private static void NotifyChanged() => Changed?.Invoke();
 }

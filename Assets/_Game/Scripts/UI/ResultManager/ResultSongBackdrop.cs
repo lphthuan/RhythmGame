@@ -78,7 +78,7 @@ public static class ResultSongBackdrop
         RectTransform rightScoreBoard = FindRect(overlay, "Right_ScoreBoard");
         if (rightScoreBoard != null)
         {
-            SetRect(rightScoreBoard, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-108f, 0f), new Vector2(168f, 126f));
+            SetRect(rightScoreBoard, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-132f, 0f), new Vector2(210f, 132f));
             rightScoreBoard.localScale = Vector3.one;
             RepairComboBadgeChildren(rightScoreBoard);
         }
@@ -86,7 +86,10 @@ public static class ResultSongBackdrop
         RectTransform maxCombo = FindRect(overlay, "MaxComboText");
         if (maxCombo != null)
         {
-            SetRect(maxCombo, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-112f, -12f), new Vector2(128f, 58f));
+            if (rightScoreBoard != null && maxCombo.parent != rightScoreBoard)
+                maxCombo.SetParent(rightScoreBoard, false);
+
+            SetRect(maxCombo, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -10f), new Vector2(120f, 54f));
             TextMeshProUGUI comboText = maxCombo.GetComponent<TextMeshProUGUI>();
             if (comboText != null)
             {
@@ -114,15 +117,15 @@ public static class ResultSongBackdrop
         TextMeshProUGUI title = FindSongTitleText(leftSongInfo);
         if (title != null)
         {
-            SetRect(title.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(4f, -8f), new Vector2(238f, 62f));
+            SetRect(title.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(8f, 38f), new Vector2(250f, 40f));
             TmpRuntimeFontFallback.Apply(title);
             title.text = song != null && !string.IsNullOrWhiteSpace(song.SongTitle) ? song.SongTitle : "Unknown Song";
-            title.fontSize = 18f;
+            title.fontSize = 17f;
             title.enableAutoSizing = true;
             title.fontSizeMin = 10f;
-            title.fontSizeMax = 18f;
+            title.fontSizeMax = 17f;
             title.alignment = TextAlignmentOptions.Left;
-            title.textWrappingMode = TextWrappingModes.Normal;
+            title.textWrappingMode = TextWrappingModes.NoWrap;
             title.overflowMode = TextOverflowModes.Ellipsis;
         }
 
@@ -145,7 +148,7 @@ public static class ResultSongBackdrop
             if (image == null)
                 continue;
 
-            SetRect(image.rectTransform, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-8f, 0f), new Vector2(150f, 98f));
+            SetRect(image.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(164f, 104f));
             image.preserveAspect = true;
         }
 
@@ -159,7 +162,7 @@ public static class ResultSongBackdrop
             if (normalized == "COMBO")
             {
                 label.text = "COMBO";
-                SetRect(label.rectTransform, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-56f, 32f), new Vector2(82f, 24f));
+                SetRect(label.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 31f), new Vector2(104f, 22f));
                 label.fontSize = 15f;
                 label.enableAutoSizing = true;
                 label.fontSizeMin = 9f;
