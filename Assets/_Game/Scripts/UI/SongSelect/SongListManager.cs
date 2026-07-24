@@ -53,6 +53,9 @@ public class SongListManager : MonoBehaviour
     private TextMeshProUGUI _lastScoreText;
     private TextMeshProUGUI _bestScoreText;
     private TextMeshProUGUI _rankText;
+    private RectTransform _leaderboardContent;
+    private TextMeshProUGUI _leaderboardSubtitle;
+    private TextMeshProUGUI _leaderboardEmptyText;
     private TextMeshProUGUI _moneyText;
     private TextMeshProUGUI _diamondText;
     private TextMeshProUGUI _songActionText;
@@ -96,6 +99,8 @@ public class SongListManager : MonoBehaviour
 
     private void Start()
     {
+        EnsureLocalLeaderboard();
+        OnlineLeaderboardService.EnsureInstance();
         if (buildGeneratedLayout)
         {
             BuildGeneratedLayout();
@@ -325,9 +330,18 @@ public class SongListManager : MonoBehaviour
             _previewArtFitter.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
         }
         _noArtText = FindText(root, "No Art Label") ?? FirstText(root.Find("Selected Song Detail/Song Art Frame"));
-        _lastScoreText = FindText(root, "Last Score Value");
-        _bestScoreText = FindText(root, "Best Score Value");
-        _rankText = FindText(root, "Best Rank Value");
+        RectTransform detail = root.Find("Selected Song Detail") as RectTransform;
+        RectTransform legacyScore = detail != null ? detail.Find("Score Panel") as RectTransform : null;
+        if (legacyScore != null)
+            legacyScore.gameObject.SetActive(false);
+        RectTransform leaderboard = detail != null ? detail.Find("Leaderboard Panel") as RectTransform : null;
+        if (leaderboard == null && detail != null)
+        {
+            leaderboard = CreatePanel("Leaderboard Panel", detail, new Color(0.075f, 0.025f, 0.13f, 0.94f));
+        }
+        if (leaderboard != null)
+            Anchor(leaderboard, new Vector2(0.035f, 0.07f), new Vector2(0.415f, 0.57f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+        BuildLeaderboardPanel(leaderboard);
         _songActionText = FindText(root, "Song Action Label");
         _songActionButton = root.Find("Selected Song Detail/Song Action")?.GetComponent<Button>();
         if (_songActionButton != null)
@@ -454,16 +468,9 @@ public class SongListManager : MonoBehaviour
         _noArtText = CreateText("NO ART", artFrame, 31, FontStyles.Bold, TextAlignmentOptions.Center, new Color(1f, 1f, 1f, 0.48f), Vector2.zero, new Vector2(260f, 55f));
         _noArtText.gameObject.name = "No Art Label";
 
-        RectTransform score = CreatePanel("Score Panel", detail, new Color(0.10f, 0.05f, 0.16f, 0.78f));
-        Anchor(score, new Vector2(0.035f, 0.07f), new Vector2(0.40f, 0.43f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
-        CreateText("LAST SCORE", score, 13, FontStyles.Bold, TextAlignmentOptions.Center, new Color(0.86f, 0.75f, 1f, 1f), new Vector2(0f, 46f), new Vector2(210f, 22f));
-        _lastScoreText = CreateText("0000000", score, 24, FontStyles.Bold, TextAlignmentOptions.Center, Color.white, new Vector2(0f, 20f), new Vector2(220f, 30f));
-        _lastScoreText.gameObject.name = "Last Score Value";
-        CreateText("BEST SCORE", score, 13, FontStyles.Bold, TextAlignmentOptions.Center, new Color(0.86f, 0.75f, 1f, 1f), new Vector2(-35f, -17f), new Vector2(160f, 22f));
-        _bestScoreText = CreateText("0000000", score, 19, FontStyles.Bold, TextAlignmentOptions.Center, Color.white, new Vector2(-25f, -39f), new Vector2(165f, 28f));
-        _bestScoreText.gameObject.name = "Best Score Value";
-        _rankText = CreateText("-", score, 32, FontStyles.Bold, TextAlignmentOptions.Center, new Color(1f, 0.55f, 0.25f, 1f), new Vector2(77f, -28f), new Vector2(56f, 54f));
-        _rankText.gameObject.name = "Best Rank Value";
+        RectTransform leaderboard = CreatePanel("Leaderboard Panel", detail, new Color(0.075f, 0.025f, 0.13f, 0.94f));
+        Anchor(leaderboard, new Vector2(0.035f, 0.07f), new Vector2(0.415f, 0.57f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+        BuildLeaderboardPanel(leaderboard);
 
         RectTransform action = CreateButton("Song Action", detail, "PLAY", new Color(0.40f, 0.17f, 0.53f, 1f), 18f);
         Anchor(action, new Vector2(0.43f, 0.02f), new Vector2(0.96f, 0.08f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
@@ -851,8 +858,228 @@ public class SongListManager : MonoBehaviour
             _bestScoreText.text = stats.BestScore.ToString("D7");
         if (_rankText != null)
             _rankText.text = string.IsNullOrEmpty(stats.BestRank) ? "-" : stats.BestRank;
+        RefreshLeaderboard(song, stats);
         UpdateSongActionButton(song, unlocked);
         UpdateDifficultyButtons();
+    }
+
+    private static void EnsureLocalLeaderboard()
+    {
+        if (LocalLeaderboardManager.Instance != null)
+            return;
+
+        new GameObject("Local Leaderboard Manager").AddComponent<LocalLeaderboardManager>();
+    }
+
+    /// <summary>
+    /// Replaces the former Last/Best Score block with a compact, scrollable ranking panel.
+    /// It is rebuilt on both a generated screen and the editable scene preview so their
+    /// proportions remain identical at every canvas resolution.
+    /// </summary>
+    private void BuildLeaderboardPanel(RectTransform panel)
+    {
+        if (panel == null)
+            return;
+
+        for (int i = panel.childCount - 1; i >= 0; i--)
+        {
+            GameObject child = panel.GetChild(i).gameObject;
+            if (Application.isPlaying)
+                Destroy(child);
+            else
+                DestroyImmediate(child);
+        }
+
+        _lastScoreText = null;
+        _bestScoreText = null;
+        _rankText = null;
+
+        Image background = panel.GetComponent<Image>();
+        if (background != null)
+            background.color = new Color(0.075f, 0.025f, 0.13f, 0.94f);
+
+        CreateLeaderboardBorder(panel, true, new Color(0.73f, 0.30f, 1f, 0.88f));
+        CreateLeaderboardBorder(panel, false, new Color(0.73f, 0.30f, 1f, 0.50f));
+
+        TextMeshProUGUI heading = CreateLeaderboardText("◆  LEADERBOARD", panel, new Vector2(0f, 1f), new Vector2(0f, 1f),
+            new Vector2(14f, -15f), new Vector2(230f, 28f), 18f, FontStyles.Bold, TextAlignmentOptions.Left, new Color(0.93f, 0.82f, 1f, 1f));
+        heading.characterSpacing = 0.8f;
+        _leaderboardSubtitle = CreateLeaderboardText("HARD  •  GLOBAL TOP 50", panel, new Vector2(0f, 1f), new Vector2(0f, 1f),
+            new Vector2(15f, -42f), new Vector2(230f, 18f), 11f, FontStyles.Bold, TextAlignmentOptions.Left, new Color(0.80f, 0.55f, 1f, 0.96f));
+
+        RectTransform viewport = CreatePanel("Leaderboard Viewport", panel, new Color(0f, 0f, 0f, 0.12f));
+        Anchor(viewport, new Vector2(0f, 0f), new Vector2(1f, 1f), new Vector2(0.5f, 0.5f), new Vector2(0f, -34f), new Vector2(-16f, -72f));
+        viewport.gameObject.AddComponent<RectMask2D>();
+
+        RectTransform content = CreateRect("Content", viewport);
+        content.anchorMin = new Vector2(0f, 1f);
+        content.anchorMax = new Vector2(1f, 1f);
+        content.pivot = new Vector2(0.5f, 1f);
+        content.anchoredPosition = Vector2.zero;
+        content.sizeDelta = new Vector2(0f, 1f);
+        _leaderboardContent = content;
+
+        ScrollRect scroll = panel.GetComponent<ScrollRect>();
+        if (scroll == null)
+            scroll = panel.gameObject.AddComponent<ScrollRect>();
+        scroll.viewport = viewport;
+        scroll.content = content;
+        scroll.horizontal = false;
+        scroll.vertical = true;
+        scroll.movementType = ScrollRect.MovementType.Clamped;
+        scroll.scrollSensitivity = 22f;
+        scroll.verticalNormalizedPosition = 1f;
+
+        _leaderboardEmptyText = CreateLeaderboardText("SYNCING GLOBAL RANKING...", content, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+            new Vector2(0f, -36f), new Vector2(220f, 24f), 9f, FontStyles.Italic, TextAlignmentOptions.Center, new Color(0.85f, 0.76f, 0.95f, 0.72f));
+    }
+
+    private static void CreateLeaderboardBorder(RectTransform parent, bool top, Color color)
+    {
+        RectTransform line = CreateRect("Leaderboard Border", parent);
+        float y = top ? 1f : 0f;
+        line.anchorMin = new Vector2(0f, y);
+        line.anchorMax = new Vector2(1f, y);
+        line.pivot = new Vector2(0.5f, 0.5f);
+        line.anchoredPosition = new Vector2(0f, top ? -2f : 2f);
+        line.sizeDelta = new Vector2(-8f, 2f);
+        Image image = line.gameObject.AddComponent<Image>();
+        image.color = color;
+        image.raycastTarget = false;
+    }
+
+    private static TextMeshProUGUI CreateLeaderboardText(string text, Transform parent, Vector2 anchor, Vector2 pivot,
+        Vector2 position, Vector2 size, float fontSize, FontStyles style, TextAlignmentOptions alignment, Color color)
+    {
+        RectTransform rect = CreateRect("Leaderboard Text - " + text, parent);
+        rect.anchorMin = rect.anchorMax = anchor;
+        rect.pivot = pivot;
+        rect.anchoredPosition = position;
+        rect.sizeDelta = size;
+        TextMeshProUGUI label = rect.gameObject.AddComponent<TextMeshProUGUI>();
+        label.fontSize = fontSize;
+        label.fontStyle = style;
+        label.alignment = alignment;
+        label.color = color;
+        label.textWrappingMode = TextWrappingModes.NoWrap;
+        label.overflowMode = TextOverflowModes.Ellipsis;
+        label.raycastTarget = false;
+        TmpRuntimeFontFallback.Apply(label);
+        label.text = text;
+        return label;
+    }
+
+    private void RefreshLeaderboard(SongData song, SongPlayStats stats)
+    {
+        if (_leaderboardContent == null || song == null)
+            return;
+
+        for (int i = _leaderboardContent.childCount - 1; i >= 0; i--)
+        {
+            GameObject child = _leaderboardContent.GetChild(i).gameObject;
+            if (Application.isPlaying)
+                Destroy(child);
+            else
+                DestroyImmediate(child);
+        }
+
+        if (_leaderboardSubtitle != null)
+            _leaderboardSubtitle.text = "TOP 50  •  " + _selectedDifficulty.ToString().ToUpperInvariant();
+
+        string leaderboardSongId = string.IsNullOrWhiteSpace(song.songGroupId) ? song.name : song.songGroupId;
+        RenderLeaderboardLoading();
+
+        // The panel is intentionally server-authoritative. Local rows are not
+        // mixed in, otherwise two accounts on different devices see different ranks.
+        Difficulty displayedDifficulty = _selectedDifficulty;
+        OnlineLeaderboardService service = OnlineLeaderboardService.EnsureInstance();
+        service.SubmitIfImproved(leaderboardSongId, displayedDifficulty, stats.BestScore, Mathf.Clamp01(stats.BestScore / 1000000f), 0, _ => service.FetchTop(leaderboardSongId, displayedDifficulty, remoteEntries =>
+        {
+            if (_selectedSong != song || _selectedDifficulty != displayedDifficulty)
+                return;
+
+            RenderLeaderboard(remoteEntries);
+        }));
+    }
+
+    private void RenderLeaderboardLoading()
+    {
+        if (_leaderboardContent == null)
+            return;
+
+        ClearLeaderboardRows();
+        _leaderboardContent.sizeDelta = new Vector2(0f, 72f);
+        CreateLeaderboardText("SYNCING GLOBAL RANKING...", _leaderboardContent, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+            new Vector2(0f, -36f), new Vector2(220f, 24f), 9f, FontStyles.Italic, TextAlignmentOptions.Center, new Color(0.85f, 0.76f, 0.95f, 0.72f));
+    }
+
+    private void RenderLeaderboard(List<LeaderboardEntry> entries)
+    {
+        if (_leaderboardContent == null)
+            return;
+
+        ClearLeaderboardRows();
+
+        if (entries == null || entries.Count == 0)
+        {
+            _leaderboardContent.sizeDelta = new Vector2(0f, 62f);
+            _leaderboardEmptyText = CreateLeaderboardText("NO GLOBAL SCORES YET", _leaderboardContent, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+                new Vector2(0f, -34f), new Vector2(220f, 24f), 9f, FontStyles.Italic, TextAlignmentOptions.Center, new Color(0.85f, 0.76f, 0.95f, 0.72f));
+            return;
+        }
+
+        const float rowHeight = 27f;
+        const float topPadding = 2f;
+        _leaderboardContent.sizeDelta = new Vector2(0f, topPadding + entries.Count * rowHeight + 3f);
+        for (int i = 0; i < entries.Count; i++)
+            CreateLeaderboardRow(_leaderboardContent, entries[i], i + 1, topPadding + i * rowHeight, i == 0);
+    }
+
+    private void ClearLeaderboardRows()
+    {
+        if (_leaderboardContent == null)
+            return;
+
+        for (int i = _leaderboardContent.childCount - 1; i >= 0; i--)
+        {
+            GameObject child = _leaderboardContent.GetChild(i).gameObject;
+            if (Application.isPlaying)
+                Destroy(child);
+            else
+                DestroyImmediate(child);
+        }
+    }
+
+    private string DisplayPlayerName => AccountSession.IsSignedIn ? AccountSession.CurrentUsername : "GUEST";
+
+    private static void CreateLeaderboardRow(RectTransform parent, LeaderboardEntry entry, int position, float y, bool firstPlace)
+    {
+        Color rowColor = firstPlace
+            ? new Color(0.44f, 0.24f, 0.09f, 0.78f)
+            : new Color(0.18f, 0.09f, 0.27f, position % 2 == 0 ? 0.64f : 0.42f);
+        RectTransform row = CreatePanel("Rank " + position, parent, rowColor);
+        row.anchorMin = new Vector2(0f, 1f);
+        row.anchorMax = new Vector2(1f, 1f);
+        row.pivot = new Vector2(0.5f, 1f);
+        row.anchoredPosition = new Vector2(0f, -y);
+        row.sizeDelta = new Vector2(0f, 24f);
+
+        Color numberColor = firstPlace ? new Color(1f, 0.84f, 0.26f, 1f) : new Color(0.92f, 0.80f, 1f, 0.95f);
+        CreateLeaderboardText("#" + position.ToString("00"), row, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f),
+            new Vector2(7f, 0f), new Vector2(38f, 23f), 13f, FontStyles.Bold, TextAlignmentOptions.Left, numberColor);
+        RectTransform playerViewport = CreateRect("Username Viewport", row);
+        playerViewport.anchorMin = playerViewport.anchorMax = new Vector2(0f, 0.5f);
+        playerViewport.pivot = new Vector2(0f, 0.5f);
+        playerViewport.anchoredPosition = new Vector2(46f, 0f);
+        playerViewport.sizeDelta = new Vector2(118f, 23f);
+        playerViewport.gameObject.AddComponent<RectMask2D>();
+        TextMeshProUGUI player = CreateLeaderboardText(string.IsNullOrWhiteSpace(entry.playerName) ? "PLAYER" : entry.playerName.ToUpperInvariant(), playerViewport,
+            new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), Vector2.zero, new Vector2(118f, 23f), 13f, FontStyles.Bold, TextAlignmentOptions.Left, Color.white);
+        player.gameObject.AddComponent<LeaderboardNameMarquee>().Configure(playerViewport, player);
+        CreateLeaderboardText(entry.score.ToString("D7"), row, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f),
+            new Vector2(-30f, 0f), new Vector2(72f, 23f), 13f, FontStyles.Bold, TextAlignmentOptions.Right, new Color(0.96f, 0.94f, 1f, 1f));
+        CreateLeaderboardText(string.IsNullOrWhiteSpace(entry.rank) ? "-" : entry.rank, row, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f),
+            new Vector2(-6f, 0f), new Vector2(23f, 23f), 13f, FontStyles.Bold, TextAlignmentOptions.Center, firstPlace ? new Color(1f, 0.82f, 0.20f, 1f) : new Color(0.90f, 0.52f, 1f, 1f));
     }
 
     private void UpdateDifficultyButtons()

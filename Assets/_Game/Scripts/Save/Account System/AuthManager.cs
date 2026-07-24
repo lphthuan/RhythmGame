@@ -4,6 +4,7 @@ using TMPro;
 using System.Collections;
 using System.Text;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 public class AuthManager : MonoBehaviour
 {
@@ -32,12 +33,12 @@ public class AuthManager : MonoBehaviour
     // ???ng d?n k?t n?i tr?c ti?p t?i c?ng HTTP th??ng, lo?i b? ho�n to�n l?i ng?t k?t n?i HTTPS
     private string baseURL = "https://api.rhythmgame.id.vn/api/Auth/";
 
-private void Start()
+    private void Start()
     {
-        if (SceneManager.GetActiveScene().name == "Register")
-            SwitchToRegisterPanel();
-        else
-            SwitchToLoginPanel();
+        // The auth scene always opens at Login. Players can explicitly choose
+        // the existing Register action when they need a new account.
+        SwitchToLoginPanel();
+        CreateGuestButton();
     }
 
     public void SwitchToRegisterPanel()
@@ -101,6 +102,13 @@ private void Start()
         if (registerPassword.text.Length < 6)
         {
             ShowError("Password must be at least 6 characters.");
+            registerPassword.Select();
+            return false;
+        }
+
+        if (!ContainsUppercaseLetter(registerPassword.text))
+        {
+            ShowError("Password must contain at least 1 uppercase letter.");
             registerPassword.Select();
             return false;
         }
@@ -182,10 +190,8 @@ private void Start()
             if (isSuccess)
             {
                 ShowSuccess("Login successful!");
-                PlayerPrefs.SetString("UserMode", "Member");
-                PlayerPrefs.SetString("CurrentUsername", loginUsername.text);
-                PlayerPrefs.Save();
-                Invoke("LoadGameplayScene", 1f);
+                AccountSession.SignIn(loginUsername.text);
+                Invoke(nameof(LoadStartMenuScene), 1f);
             }
             else
             {
@@ -224,7 +230,52 @@ private void Start()
     void ShowSuccess(string msg) { if (messageText == null) return; messageText.text = msg; messageText.color = Color.green; }
     void ShowError(string msg) { if (messageText == null) return; messageText.text = msg; messageText.color = Color.red; }
     void ClearMessage() { if (messageText != null) messageText.text = ""; }
-    void LoadGameplayScene() { SceneManager.LoadScene("SongSelect"); }
+    public void Logout()
+    {
+        AccountSession.SignOut();
+        SwitchToLoginPanel();
+        ShowSuccess("Logged out. Guest data is now active on this device.");
+    }
+    public void PlayAsGuest()
+    {
+        AccountSession.SignOut();
+        ShowNormal("Starting guest session...");
+        Invoke(nameof(LoadStartMenuScene), 0.35f);
+    }
+
+    private void CreateGuestButton()
+    {
+        if (loginPanel == null || loginPanel.transform.Find("Button_PlayAsGuest") != null)
+            return;
+
+        Transform registerButton = loginPanel.transform.Find("Button_SwitchToRegister");
+        if (registerButton == null)
+            return;
+
+        GameObject guest = Instantiate(registerButton.gameObject, loginPanel.transform);
+        guest.name = "Button_PlayAsGuest";
+        RectTransform guestRect = guest.GetComponent<RectTransform>();
+        guestRect.anchoredPosition = new Vector2(0f, -238f);
+
+        Button button = guest.GetComponent<Button>();
+        button.onClick.RemoveAllListeners();
+        button.onClick.AddListener(PlayAsGuest);
+
+        TextMeshProUGUI label = guest.GetComponentInChildren<TextMeshProUGUI>(true);
+        if (label != null)
+            label.text = "PLAY AS GUEST";
+    }
+
+    private void LoadStartMenuScene() => SceneLoadUtility.LoadSceneByName("StartMenu");
+
+    private static bool ContainsUppercaseLetter(string value)
+    {
+        foreach (char character in value)
+            if (char.IsUpper(character))
+                return true;
+
+        return false;
+    }
 }
 
 // ================= C�C L?P ??I T??NG DATA CHUY?N ??I JSON =================

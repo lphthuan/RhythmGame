@@ -9,7 +9,7 @@ using UnityEngine;
 /// </summary>
 public static class DailyQuestService
 {
-    private const string StorageKey = "RhythmGame.DailyQuests.v1";
+    private const string StorageKey = "DailyQuests.v1";
     private static readonly TimeSpan VietnamOffset = TimeSpan.FromHours(7);
 
     public enum QuestId { PlaySongs, ClearSong, AllPerfect }
@@ -31,6 +31,11 @@ public static class DailyQuestService
 
     public static event Action Changed;
     public static string TodayKey => DateTimeOffset.UtcNow.ToOffset(VietnamOffset).ToString("yyyy-MM-dd");
+
+    static DailyQuestService()
+    {
+        AccountSession.Changed += NotifyAccountChanged;
+    }
 
     public static IReadOnlyList<QuestState> GetQuests() => EnsureToday().quests;
 
@@ -123,15 +128,17 @@ public static class DailyQuestService
 
     private static DailyState Load()
     {
-        string json = PlayerPrefs.GetString(StorageKey, string.Empty);
+        string json = PlayerPrefs.GetString(AccountSession.ScopedKey(StorageKey), string.Empty);
         DailyState state = string.IsNullOrWhiteSpace(json) ? null : JsonUtility.FromJson<DailyState>(json);
         return state ?? new DailyState();
     }
 
     private static void Save(DailyState state)
     {
-        PlayerPrefs.SetString(StorageKey, JsonUtility.ToJson(state));
+        PlayerPrefs.SetString(AccountSession.ScopedKey(StorageKey), JsonUtility.ToJson(state));
         PlayerPrefs.Save();
         Changed?.Invoke();
     }
+
+    private static void NotifyAccountChanged() => Changed?.Invoke();
 }

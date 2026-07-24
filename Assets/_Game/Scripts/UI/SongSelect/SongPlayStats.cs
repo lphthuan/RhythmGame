@@ -13,6 +13,11 @@ public readonly struct SongPlayStats
     // not repeatedly build PlayerPrefs keys or allocate strings.
     private static readonly Dictionary<StatCacheKey, SongPlayStats> Cache = new();
 
+    static SongPlayStats()
+    {
+        AccountSession.Changed += Cache.Clear;
+    }
+
     private SongPlayStats(int lastScore, int bestScore, string bestRank)
     {
         LastScore = lastScore;
@@ -103,7 +108,7 @@ public readonly struct SongPlayStats
     private static string GetKey(SongData song, Difficulty difficulty)
     {
         string id = song != null && !string.IsNullOrWhiteSpace(song.songGroupId) ? song.songGroupId : song != null ? song.name : "unknown";
-        return "RhythmGame.SongStats." + SongData.SanitizeForFileName(id) + "." + difficulty;
+        return AccountSession.ScopedKey("SongStats." + SongData.SanitizeForFileName(id) + "." + difficulty);
     }
 
     private static string GetRank(float accuracy)

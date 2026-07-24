@@ -23,6 +23,7 @@ public class SaveManager : MonoBehaviour
     // ── Interfaces & Services ────────────────────────────────────
     private ISaveProvider _provider;
     private IUnlockSystem _unlockSystem;
+    private string _storageKey;
 
     // ── Internal state ───────────────────────────────────────────
     private PlayerSaveData _data;
@@ -48,6 +49,7 @@ public class SaveManager : MonoBehaviour
 
         // Factory khởi tạo provider
         _provider = SaveProviderFactory.Create(_backend);
+        AccountSession.Changed += HandleAccountChanged;
         LoadData();
 
         // Khởi tạo Unlock System và truyền tham chiếu data để nó có thể sửa
@@ -64,6 +66,11 @@ public class SaveManager : MonoBehaviour
         FlushToDisk();
     }
 
+    private void OnDestroy()
+    {
+        AccountSession.Changed -= HandleAccountChanged;
+    }
+
     // ─────────────────────────────────────────────────────────────────────
     // Public API — Lưu kết quả gameplay
     // ─────────────────────────────────────────────────────────────────────
@@ -73,7 +80,7 @@ public class SaveManager : MonoBehaviour
     /// Kích hoạt event OnScoreSaved để CloudSyncManager hoặc LocalLeaderboardManager xử lý.
     /// </summary>
     public bool SaveResult(string songGroupId, Difficulty difficulty,
-                           int score, float accuracy, bool isAllPerfect = false)
+                           int score, float accuracy, bool isAllPerfect = false, int maxCombo = 0)
     {
         string key  = SongKey.Build(songGroupId, difficulty);
         string rank = RankCalculator.Calculate(accuracy, isAllPerfect);
@@ -131,6 +138,7 @@ public class SaveManager : MonoBehaviour
             Score          = score,
             Accuracy       = accuracy,
             Rank           = rank,
+            MaxCombo       = Mathf.Max(0, maxCombo),
             IsAllPerfect   = isAllPerfect,
             IsNewHighScore = isNewHighScore
         });
@@ -199,13 +207,16 @@ public class SaveManager : MonoBehaviour
 
     private void LoadData()
     {
-        _data = _provider.Load<PlayerSaveData>(SaveKeys.PLAYER_DATA);
+        _storageKey = SaveKeys.PLAYER_DATA + "." + AccountSession.StorageId;
+        _data = _provider.Load<PlayerSaveData>(_storageKey);
 
         // Đảm bảo không null
         _data.settings ??= new PlayerSaveSettings();
         _data.songs    ??= new List<SongSaveData>();
 
         RebuildCache();
+        if (AccountSession.IsSignedIn)
+            _data.playerId = AccountSession.CurrentUsername;
         Debug.Log($"[SaveManager] ✅ Loaded via {_provider.GetType().Name}. Player: '{_data.playerId}', Songs: {_data.songs.Count}");
     }
 
@@ -222,6 +233,14 @@ public class SaveManager : MonoBehaviour
     public void FlushToDisk()
     {
         if (_data == null || _provider == null) return;
-        _provider.Save(SaveKeys.PLAYER_DATA, _data);
+        _provider.Save(_storageKey, _data);
+    }
+
+    private void HandleAccountChanged()
+    {
+        FlushToDisk();
+        LoadData();
+        _unlockSystem = new UnlockSystem(_provider, _data);
+        FlushToDisk();
     }
 }

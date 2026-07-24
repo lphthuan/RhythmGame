@@ -10,13 +10,18 @@ public static class NoteSkinService
     public const string NightSkyId = "skin:night-sky";
     public const string ArcaeaConflictSideId = "skin:arcaea-conflict-side";
     public const int ArcaeaConflictSidePrice = 500;
-    private const string EquippedSkinKey = "RhythmGame.NoteSkin.Equipped";
+    private const string EquippedSkinKey = "NoteSkin.Equipped";
     private const string ResourceRoot = "NoteSkins/ArcaeaConflictSide/";
 
     private static SkinSprites _arcaea;
     public static event System.Action Changed;
 
-    public static string EquippedSkinId => PlayerPrefs.GetString(EquippedSkinKey, string.Empty);
+    static NoteSkinService()
+    {
+        AccountSession.Changed += NotifyAccountChanged;
+    }
+
+    public static string EquippedSkinId => PlayerPrefs.GetString(AccountSession.ScopedKey(EquippedSkinKey), string.Empty);
     public static bool IsOwned(string skinId) => skinId == NightSkyId || PlayerInventory.IsOwned(skinId);
     public static bool IsEquipped(string skinId) => skinId == NightSkyId
         ? string.IsNullOrWhiteSpace(EquippedSkinId)
@@ -49,7 +54,7 @@ public static class NoteSkinService
     {
         if (skinId == NightSkyId)
         {
-            PlayerPrefs.DeleteKey(EquippedSkinKey);
+            PlayerPrefs.DeleteKey(AccountSession.ScopedKey(EquippedSkinKey));
             PlayerPrefs.Save();
             Changed?.Invoke();
             message = "Đã áp dụng Night Sky.";
@@ -62,7 +67,7 @@ public static class NoteSkinService
             return false;
         }
 
-        PlayerPrefs.SetString(EquippedSkinKey, skinId);
+        PlayerPrefs.SetString(AccountSession.ScopedKey(EquippedSkinKey), skinId);
         PlayerPrefs.Save();
         Changed?.Invoke();
         ApplyToCurrentScene();
@@ -134,5 +139,11 @@ public static class NoteSkinService
     {
         public bool loaded;
         public Sprite tap, holdHead, holdBody, holdTail, stageLeft, stageRight, stageHint, stageBottom, stageLight;
+    }
+
+    private static void NotifyAccountChanged()
+    {
+        Changed?.Invoke();
+        ApplyToCurrentScene();
     }
 }
