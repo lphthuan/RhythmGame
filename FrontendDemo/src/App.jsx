@@ -15,11 +15,16 @@ import {
 } from 'lucide-react';
 
 const API_BASE = 'http://localhost:5000/api';
+const PLAYER_ID = new URLSearchParams(window.location.search).get('playerId') || 'demo-player';
+const API_CONFIG = { headers: { 'X-Player-Id': PLAYER_ID } };
 
 function App() {
   const [packages, setPackages] = useState([]);
   const [devPackages, setDevPackages] = useState([]);
   const [balance, setBalance] = useState(0);
+  const [diamondBalance, setDiamondBalance] = useState(0);
+  const [showConvertModal, setShowConvertModal] = useState(false);
+  const [convertAmount, setConvertAmount] = useState('');
   const [isDevMode, setIsDevMode] = useState(false);
   const [devClickCount, setDevClickCount] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -62,7 +67,7 @@ function App() {
 
   const fetchData = async () => {
     try {
-      const res = await axios.get(`${API_BASE}/packages?dev=${isDevMode}`);
+      const res = await axios.get(`${API_BASE}/packages?dev=${isDevMode}`, API_CONFIG);
       setPackages(res.data.packages);
       setDevPackages(res.data.devPackages);
       fetchBalance();
@@ -73,9 +78,27 @@ function App() {
 
   const fetchBalance = async () => {
     try {
-      const res = await axios.get(`${API_BASE}/user/balance`);
-      setBalance(res.data.balance);
+      const res = await axios.get(`${API_BASE}/user/balance`, API_CONFIG);
+      setBalance(res.data.rc ?? res.data.balance ?? 0);
+      setDiamondBalance(res.data.diamonds ?? 0);
     } catch (err) {}
+  };
+
+  const convertRcToDiamonds = async () => {
+    const amount = Number(convertAmount);
+    if (!Number.isInteger(amount) || amount <= 0) {
+      showToast('Nhập số RC hợp lệ.', 'error');
+      return;
+    }
+    try {
+      const res = await axios.post(`${API_BASE}/wallet/convert`, { amount }, API_CONFIG);
+      setBalance(res.data.rc);
+      setDiamondBalance(res.data.diamonds);
+      setConvertAmount('');
+      showToast(`Đã đổi ${amount} RC thành ${amount} Diamond.`);
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Không thể đổi RC.', 'error');
+    }
   };
 
   const handleDevToggle = () => {
@@ -100,7 +123,7 @@ function App() {
       else if (provider === 'dev') endpoint = '/payment/dev_recharge';
       else if (provider === 'free') endpoint = '/payment/free';
 
-      const res = await axios.post(`${API_BASE}${endpoint}`, { packageId });
+      const res = await axios.post(`${API_BASE}${endpoint}`, { packageId }, API_CONFIG);
       
       if (provider === 'dev' || provider === 'free') {
         showToast(res.data.message, res.data.success !== false ? 'success' : 'error');
@@ -186,10 +209,11 @@ function App() {
         <div onClick={handleDevToggle} className="logo">
           <span className="logo-accent">RHYTHM</span> STORE
         </div>
-        <div className="balance-pill">
+        <button className="balance-pill" onClick={() => setShowConvertModal(true)}>
           <Coins color="#c8aa6e" size={16} />
           <span>{balance.toLocaleString()} RC</span>
-        </div>
+          <span className="balance-plus">+</span>
+        </button>
       </header>
 
       <main className="main-content">
@@ -226,6 +250,29 @@ function App() {
           </div>
         </footer>
       </main>
+
+      {showConvertModal && (
+        <div className="modal-overlay" onClick={() => setShowConvertModal(false)}>
+          <div className="modal-content convert-modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>ĐỔI RC SANG DIAMOND</h3>
+              <button className="close-btn" onClick={() => setShowConvertModal(false)}><X size={24} /></button>
+            </div>
+            <div className="convert-balance">RC: {balance.toLocaleString()} &nbsp; • &nbsp; Diamond: {diamondBalance.toLocaleString()}</div>
+            <p className="convert-help">Tỷ lệ đổi: 1 RC = 1 Diamond</p>
+            <input
+              className="convert-input"
+              type="number"
+              min="1"
+              max={balance}
+              value={convertAmount}
+              onChange={e => setConvertAmount(e.target.value)}
+              placeholder="Nhập số RC muốn đổi"
+            />
+            <button className="convert-button" onClick={convertRcToDiamonds}>ĐỔI NGAY</button>
+          </div>
+        </div>
+      )}
 
       {/* Payment Modal */}
       {showPaymentModal && (
@@ -381,6 +428,8 @@ function App() {
         }
         .logo-accent { color: var(--primary); }
         .balance-pill {
+          cursor: pointer;
+          font-family: inherit;
           background: rgba(200, 170, 110, 0.1);
           border: 1px solid rgba(200, 170, 110, 0.3);
           padding: 6px 14px;
@@ -391,6 +440,20 @@ function App() {
           color: var(--primary);
           font-weight: 700;
           font-size: 14px;
+        }
+        .balance-pill:hover { border-color: var(--primary); background: rgba(200, 170, 110, 0.2); }
+        .balance-plus { font-size: 18px; line-height: 1; margin-left: 2px; }
+        .convert-modal { max-width: 390px; }
+        .convert-balance { color: var(--primary); font-weight: 700; text-align: center; margin: 10px 0; }
+        .convert-help { color: var(--text-muted); text-align: center; font-size: 13px; }
+        .convert-input {
+          width: 100%; box-sizing: border-box; padding: 13px; margin: 10px 0;
+          background: #101216; color: var(--text-main); border: 1px solid var(--border-color);
+          border-radius: 4px; font-size: 16px;
+        }
+        .convert-button {
+          width: 100%; padding: 13px; border: 0; border-radius: 4px;
+          background: var(--primary); color: #101216; font-weight: 800; cursor: pointer;
         }
 
         .main-content {

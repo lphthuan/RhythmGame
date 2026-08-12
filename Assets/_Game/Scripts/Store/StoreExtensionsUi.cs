@@ -31,8 +31,54 @@ public sealed class StoreExtensionsUi : MonoBehaviour
             return;
 
         tabs.lockNote = false;
+        BuildRechargeCard(tabs.themePanel);
         BuildSkinCard(tabs.notePanel);
+        CloudSyncManager.GetOrCreate().RefreshWallet();
     }
+
+    private static void BuildRechargeCard(GameObject panel)
+    {
+        Transform content = GetContent(panel);
+        if (content == null || content.Find("RG Diamond Recharge Card") != null)
+            return;
+
+        RectTransform card = CreatePanel("RG Diamond Recharge Card", content, new Color(0.12f, 0.06f, 0.22f, 0.98f));
+        card.SetAsFirstSibling();
+        card.gameObject.AddComponent<LayoutElement>().preferredHeight = 190f;
+        VerticalLayoutGroup layout = card.gameObject.AddComponent<VerticalLayoutGroup>();
+        layout.padding = new RectOffset(22, 22, 16, 16);
+        layout.spacing = 8;
+        layout.childAlignment = TextAnchor.UpperCenter;
+        layout.childControlHeight = false;
+        layout.childForceExpandHeight = false;
+
+        CreateText("DIAMOND WALLET", card, 24, FontStyles.Bold, 34f);
+        TMP_Text balance = CreateText(string.Empty, card, 20, FontStyles.Bold, 32f);
+        CreateText("Nạp tiền để nhận Diamond dùng mở khóa bài hát và vật phẩm.", card, 15, FontStyles.Normal, 30f);
+
+        RectTransform actions = CreateRect("Actions", card);
+        actions.gameObject.AddComponent<LayoutElement>().preferredHeight = 44f;
+        HorizontalLayoutGroup actionLayout = actions.gameObject.AddComponent<HorizontalLayoutGroup>();
+        actionLayout.childAlignment = TextAnchor.MiddleCenter;
+        actionLayout.spacing = 12f;
+
+        Button recharge = CreateButton(actions, "NAP DIAMOND");
+        Button sync = CreateButton(actions, "SYNC");
+
+        void RefreshBalance() => balance.text = $"Diamond: {PlayerWallet.Diamond}";
+        recharge.onClick.AddListener(() =>
+        {
+            string playerId = SaveManager.Instance != null ? SaveManager.Instance.GetPlayerId() : null;
+            if (string.IsNullOrEmpty(playerId) && AccountSession.IsSignedIn)
+                playerId = AccountSession.CurrentUsername;
+            if (string.IsNullOrEmpty(playerId)) playerId = "demo-player";
+            Application.OpenURL("http://localhost:5173/?playerId=" + UnityEngine.Networking.UnityWebRequest.EscapeURL(playerId));
+        });
+        sync.onClick.AddListener(() => CloudSyncManager.GetOrCreate().RefreshWallet(_ => RefreshBalance()));
+        PlayerWallet.Changed += RefreshBalance;
+        RefreshBalance();
+    }
+
 
     private static void BuildSkinCard(GameObject panel)
     {

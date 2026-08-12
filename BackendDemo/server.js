@@ -1,4 +1,6 @@
 require('dotenv').config();
+const fs = require('fs');
+const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
@@ -15,8 +17,52 @@ app.use(bodyParser.urlencoded({ extended: true }));
 const PORT = process.env.PORT || 5000;
 
 // Fake database in-memory
-let userBalance = 0;
+const playerWallets = {};
+const playerDiamondWallets = {};
 const transactions = [];
+const walletStorePath = path.join(__dirname, 'wallet.local.json');
+
+try {
+    if (fs.existsSync(walletStorePath)) {
+        const saved = JSON.parse(fs.readFileSync(walletStorePath, 'utf8'));
+        Object.assign(playerWallets, saved.rc || {});
+        Object.assign(playerDiamondWallets, saved.diamonds || {});
+    }
+} catch (error) {
+    console.warn('[Wallet] Could not load local wallet store:', error.message);
+}
+
+function persistWallets() {
+    try {
+        fs.writeFileSync(walletStorePath, JSON.stringify({ rc: playerWallets, diamonds: playerDiamondWallets }, null, 2));
+    } catch (error) {
+        console.warn('[Wallet] Could not persist local wallet store:', error.message);
+    }
+}
+
+function getPlayerId(req) {
+    return String(req.headers['x-player-id'] || req.body?.playerId || 'demo-player').trim() || 'demo-player';
+}
+
+function getBalance(playerId) {
+    return playerWallets[playerId] || 0;
+}
+
+function creditBalance(playerId, amount) {
+    playerWallets[playerId] = getBalance(playerId) + Math.max(0, Number(amount) || 0);
+    persistWallets();
+    return playerWallets[playerId];
+}
+
+function getDiamondBalance(playerId) {
+    return playerDiamondWallets[playerId] || 0;
+}
+
+function creditDiamonds(playerId, amount) {
+    playerDiamondWallets[playerId] = getDiamondBalance(playerId) + Math.max(0, Number(amount) || 0);
+    persistWallets();
+    return playerDiamondWallets[playerId];
+}
 
 const PACKAGES = [
     { id: 'p0', name: 'Gói Tân Thủ', price: 20000, amount: 200, description: '200 RC' },
@@ -36,7 +82,8 @@ const DEV_PACKAGES = [
 
 app.get('/api/packages', (req, res) => {
     const isDev = req.query.dev === 'true';
-    const hasBoughtFreeP0 = transactions.some(t => t.packageId === 'p0' && t.status === 'success');
+    const playerId = getPlayerId(req);
+    const hasBoughtFreeP0 = transactions.some(t => t.playerId === playerId && t.packageId === 'p0' && t.status === 'success');
     
     const dynamicPackages = PACKAGES.map(p => {
         if (p.id === 'p0') {
@@ -56,7 +103,28 @@ app.get('/api/packages', (req, res) => {
 });
 
 app.get('/api/user/balance', (req, res) => {
-    res.json({ balance: userBalance });
+    const playerId = getPlayerId(req);
+    res.json({ balance: getBalance(playerId), rc: getBalance(playerId), diamonds: getDiamondBalance(playerId), playerId, currency: 'RC' });
+});
+
+app.get('/api/user/wallet', (req, res) => {
+    const playerId = getPlayerId(req);
+    res.json({ playerId, rc: getBalance(playerId), diamonds: getDiamondBalance(playerId), conversionRate: 1 });
+});
+
+app.post('/api/wallet/convert', (req, res) => {
+    const playerId = getPlayerId(req);
+    const amount = Number(req.body.amount);
+    if (!Number.isInteger(amount) || amount <= 0)
+        return res.status(400).json({ message: 'Số lượng RC phải là số nguyên dương.' });
+    if (getBalance(playerId) < amount)
+        return res.status(400).json({ message: 'Không đủ RC để đổi.' });
+
+    playerWallets[playerId] = getBalance(playerId) - amount;
+    persistWallets();
+    const diamonds = creditDiamonds(playerId, amount);
+    transactions.push({ orderId: 'CONVERT' + Date.now(), playerId, amount, status: 'success', provider: 'rc_to_diamond' });
+    res.json({ success: true, rc: getBalance(playerId), diamonds, conversionRate: 1 });
 });
 
 app.get('/api/user/transactions', (req, res) => {
@@ -65,12 +133,13 @@ app.get('/api/user/transactions', (req, res) => {
 
 // --- Free Recharge logic ---
 app.post('/api/payment/free', (req, res) => {
+    const playerId = getPlayerId(req);
     const { packageId } = req.body;
     const pkg = PACKAGES.find(p => p.id === packageId);
     if (!pkg) return res.status(400).json({ message: 'Gói không hợp lệ' });
 
     if (packageId === 'p0') {
-        const hasBoughtFreeP0 = transactions.some(t => t.packageId === 'p0' && t.status === 'success');
+        const hasBoughtFreeP0 = transactions.some(t => t.playerId === playerId && t.packageId === 'p0' && t.status === 'success');
         if (hasBoughtFreeP0) {
             return res.status(400).json({ message: 'Bạn đã sử dụng lượt miễn phí cho gói này. Vui lòng thanh toán.' });
         }
@@ -78,13 +147,14 @@ app.post('/api/payment/free', (req, res) => {
         return res.status(400).json({ message: 'Gói này không miễn phí' });
     }
 
-    userBalance += pkg.amount;
-    transactions.push({ orderId: 'FREE' + Date.now(), packageId, status: 'success', provider: 'free' });
-    res.json({ success: true, message: 'Nhận gói miễn phí thành công!', balance: userBalance });
+    const balance = creditBalance(playerId, pkg.amount);
+    transactions.push({ orderId: 'FREE' + Date.now(), playerId, packageId, amount: pkg.amount, status: 'success', provider: 'free' });
+    res.json({ success: true, message: 'Nhận gói miễn phí thành công!', balance, rc: balance, currency: 'RC' });
 });
 
 // --- VNPay Logic ---
 app.post('/api/payment/vnpay', (req, res) => {
+    const playerId = getPlayerId(req);
     process.env.TZ = 'Asia/Ho_Chi_Minh';
     const { packageId } = req.body;
     const pkg = PACKAGES.find(p => p.id === packageId);
@@ -92,17 +162,17 @@ app.post('/api/payment/vnpay', (req, res) => {
 
     let finalPrice = pkg.price;
     if (packageId === 'p0') {
-        const hasBoughtFreeP0 = transactions.some(t => t.packageId === 'p0' && t.status === 'success');
+        const hasBoughtFreeP0 = transactions.some(t => t.playerId === playerId && t.packageId === 'p0' && t.status === 'success');
         if (!hasBoughtFreeP0) {
             finalPrice = 0;
         }
     }
 
     if (finalPrice === 0) {
-        userBalance += pkg.amount;
-        transactions.push({ orderId: 'FREE_VNPAY' + Date.now(), packageId, status: 'success', provider: 'vnpay' });
+        const balance = creditBalance(playerId, pkg.amount);
+        transactions.push({ orderId: 'FREE_VNPAY' + Date.now(), playerId, packageId, amount: pkg.amount, status: 'success', provider: 'vnpay' });
         const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-        return res.json({ paymentUrl: `${frontendUrl}?paymentStatus=success` });
+        return res.json({ paymentUrl: `${frontendUrl}?paymentStatus=success`, balance, rc: balance, currency: 'RC' });
     }
 
     let date = new Date();
@@ -143,7 +213,7 @@ app.post('/api/payment/vnpay', (req, res) => {
     vnp_Params['vnp_SecureHash'] = signed;
     vnpUrl += '?' + qs.stringify(vnp_Params, { encode: false });
 
-    transactions.push({ orderId, packageId, status: 'pending', provider: 'vnpay' });
+    transactions.push({ orderId, playerId, packageId, amount: pkg.amount, status: 'pending', provider: 'vnpay' });
     res.json({ paymentUrl: vnpUrl });
 });
 
@@ -176,9 +246,9 @@ app.get('/api/payment/vnpay_return', (req, res) => {
                 if (trans.status !== 'success') {
                     const pkg = PACKAGES.find(p => p.id === trans.packageId);
                     if (pkg) {
-                        userBalance += pkg.amount;
+                        creditBalance(trans.playerId || 'demo-player', pkg.amount);
                         trans.status = 'success';
-                        console.log(`Balance updated: +${pkg.amount}. New Balance: ${userBalance}`);
+                        console.log(`Balance updated: +${pkg.amount}. Player: ${trans.playerId || 'demo-player'}`);
                     }
                 } else {
                     console.log('Order already successful.');
@@ -223,9 +293,9 @@ app.get('/api/payment/vnpay_ipn', (req, res) => {
                 if (trans.status !== 'success') {
                     if (rspCode === '00') {
                         // Thanh cong
-                        userBalance += pkg.amount;
+                        creditBalance(trans.playerId || 'demo-player', pkg.amount);
                         trans.status = 'success';
-                        console.log(`IPN: Balance updated: +${pkg.amount}. New Balance: ${userBalance}`);
+                        console.log(`IPN: Balance updated: +${pkg.amount}. Player: ${trans.playerId || 'demo-player'}`);
                         res.status(200).json({ RspCode: '00', Message: 'Success' });
                     } else {
                         // That bai
@@ -259,9 +329,9 @@ app.get('/api/payment/momo_return', (req, res) => {
         if (trans && trans.status !== 'success') {
             const pkg = PACKAGES.find(p => p.id === trans.packageId);
             if (pkg) {
-                userBalance += pkg.amount;
+                creditBalance(trans.playerId || 'demo-player', pkg.amount);
                 trans.status = 'success';
-                console.log(`MoMo Return: Balance updated: +${pkg.amount}. New Balance: ${userBalance}`);
+                console.log(`MoMo Return: Balance updated: +${pkg.amount}. Player: ${trans.playerId || 'demo-player'}`);
             }
         }
         res.redirect(`${frontendUrl}?paymentStatus=success`);
@@ -271,6 +341,7 @@ app.get('/api/payment/momo_return', (req, res) => {
     }
 });
 app.post(['/api/payment/momo', '/api/payment/momo_atm'], async (req, res) => {
+    const playerId = getPlayerId(req);
     const isAtm = req.path.includes('momo_atm');
     const { packageId } = req.body;
     const pkg = PACKAGES.find(p => p.id === packageId);
@@ -278,17 +349,17 @@ app.post(['/api/payment/momo', '/api/payment/momo_atm'], async (req, res) => {
 
     let finalPrice = pkg.price;
     if (packageId === 'p0') {
-        const hasBoughtFreeP0 = transactions.some(t => t.packageId === 'p0' && t.status === 'success');
+        const hasBoughtFreeP0 = transactions.some(t => t.playerId === playerId && t.packageId === 'p0' && t.status === 'success');
         if (!hasBoughtFreeP0) {
             finalPrice = 0;
         }
     }
 
     if (finalPrice === 0) {
-        userBalance += pkg.amount;
-        transactions.push({ orderId: 'FREE_MOMO' + Date.now(), packageId, status: 'success', provider: isAtm ? 'momo_atm' : 'momo' });
+        const balance = creditBalance(playerId, pkg.amount);
+        transactions.push({ orderId: 'FREE_MOMO' + Date.now(), playerId, packageId, amount: pkg.amount, status: 'success', provider: isAtm ? 'momo_atm' : 'momo' });
         const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-        return res.json({ paymentUrl: `${frontendUrl}?paymentStatus=success` });
+        return res.json({ paymentUrl: `${frontendUrl}?paymentStatus=success`, balance, rc: balance, currency: 'RC' });
     }
 
     const partnerCode = process.env.MOMO_PARTNER_CODE;
@@ -341,7 +412,7 @@ app.post(['/api/payment/momo', '/api/payment/momo_atm'], async (req, res) => {
         console.log(JSON.stringify(response.data, null, 2));
 
         if (response.data && response.data.payUrl) {
-            transactions.push({ orderId, packageId, status: 'pending', provider: 'momo' });
+            transactions.push({ orderId, playerId, packageId, amount: pkg.amount, status: 'pending', provider: 'momo' });
             res.json({ paymentUrl: response.data.payUrl });
         } else {
             res.status(400).json({ message: response.data.message || 'MoMo rejected the request' });
@@ -363,7 +434,7 @@ app.post('/api/payment/momo_ipn', (req, res) => {
     const trans = transactions.find(t => t.orderId === orderId);
     if (trans && resultCode === 0 && trans.status !== 'success') {
         const pkg = PACKAGES.find(p => p.id === trans.packageId);
-        userBalance += pkg.amount;
+        creditBalance(trans.playerId || 'demo-player', pkg.amount);
         trans.status = 'success';
     }
     res.status(204).send();
@@ -371,15 +442,16 @@ app.post('/api/payment/momo_ipn', (req, res) => {
 
 // --- Dev Mode Logic ---
 app.post('/api/payment/dev_recharge', (req, res) => {
+    const playerId = getPlayerId(req);
     const { packageId } = req.body;
     const pkg = DEV_PACKAGES.find(p => p.id === packageId);
     
     if (!pkg) return res.status(404).json({ message: 'Gói Dev không tồn tại' });
 
     if (packageId === 'dev_success') {
-        userBalance += pkg.amount;
-        transactions.push({ orderId: 'DEV' + Date.now(), packageId, status: 'success', provider: 'dev' });
-        return res.json({ success: true, message: 'Nạp vô hạn tiền thành công!', balance: userBalance });
+        const balance = creditBalance(playerId, pkg.amount);
+        transactions.push({ orderId: 'DEV' + Date.now(), playerId, packageId, amount: pkg.amount, status: 'success', provider: 'dev' });
+        return res.json({ success: true, message: 'Nạp vô hạn tiền thành công!', balance, rc: balance, currency: 'RC' });
     } else {
         transactions.push({ orderId: 'DEV' + Date.now(), packageId, status: 'failed', provider: 'dev' });
         return res.json({ success: false, message: 'Thanh toán thất bại (Mô phỏng lỗi không có tiền).' });
@@ -482,6 +554,7 @@ app.get('/api/player/data', (req, res) => {
         songs,
         settings,
         progress,
+        wallet: { diamond: getDiamondBalance(playerId) },
         lastSyncedAt: Date.now()
     });
 });

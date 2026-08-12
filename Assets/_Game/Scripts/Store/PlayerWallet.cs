@@ -43,6 +43,22 @@ public static class PlayerWallet
         SetBalance(currency, GetBalance(currency) + amount);
     }
 
+    /// <summary>
+    /// Applies the server-authoritative premium balance after a successful
+    /// recharge. This prevents a payment made on another device from being
+    /// invisible to the game while keeping normal gameplay rewards local.
+    /// </summary>
+    public static void SetFromServer(CurrencyType currency, int amount)
+    {
+        if (amount < 0)
+            return;
+
+        if (GetBalance(currency) == amount)
+            return;
+
+        SetBalance(currency, amount);
+    }
+
     public static void ResetForTesting()
     {
         PlayerPrefs.DeleteKey(AccountSession.ScopedKey(MoneyKey));

@@ -108,3 +108,6 @@ InitTestScene*.unity*
 # Bỏ qua thư mục cấu hình AI local
 .agent/
 GEMINI.md
+# Local test wallet data (never commit balances)
+BackendDemo/wallet.local.json
+FrontendDemo/dist/
