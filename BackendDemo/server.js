@@ -64,6 +64,16 @@ function creditDiamonds(playerId, amount) {
     return playerDiamondWallets[playerId];
 }
 
+function buildFrontendUrl(playerId, params = {}) {
+    const frontendUrl = new URL(process.env.FRONTEND_URL || 'http://localhost:5173/');
+    frontendUrl.searchParams.set('playerId', playerId || 'demo-player');
+    for (const [key, value] of Object.entries(params)) {
+        if (value !== undefined && value !== null)
+            frontendUrl.searchParams.set(key, String(value));
+    }
+    return frontendUrl.toString();
+}
+
 const PACKAGES = [
     { id: 'p0', name: 'Gói Tân Thủ', price: 20000, amount: 200, description: '200 RC' },
     { id: 'p1', name: 'Gói Khởi Đầu', price: 50000, amount: 550, description: '500 RC + 50 Thưởng' },
@@ -171,8 +181,7 @@ app.post('/api/payment/vnpay', (req, res) => {
     if (finalPrice === 0) {
         const balance = creditBalance(playerId, pkg.amount);
         transactions.push({ orderId: 'FREE_VNPAY' + Date.now(), playerId, packageId, amount: pkg.amount, status: 'success', provider: 'vnpay' });
-        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-        return res.json({ paymentUrl: `${frontendUrl}?paymentStatus=success`, balance, rc: balance, currency: 'RC' });
+        return res.json({ paymentUrl: buildFrontendUrl(playerId, { paymentStatus: 'success' }), balance, rc: balance, currency: 'RC' });
     }
 
     let date = new Date();
@@ -232,16 +241,15 @@ app.get('/api/payment/vnpay_return', (req, res) => {
     let hmac = crypto.createHmac("sha512", secretKey);
     let signed = hmac.update(Buffer.from(signData, 'utf-8')).digest("hex");     
 
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const orderId = vnp_Params['vnp_TxnRef'];
+    const trans = transactions.find(t => t.orderId === orderId);
+    const playerId = trans?.playerId || req.query.playerId || 'demo-player';
 
     if (secureHash === signed) {
         const responseCode = vnp_Params['vnp_ResponseCode'];
-        const orderId = vnp_Params['vnp_TxnRef'];
-        
         console.log(`Signature Match! OrderId: ${orderId}, ResponseCode: ${responseCode}`);
 
         if (responseCode === '00') {
-            const trans = transactions.find(t => t.orderId === orderId);
             if (trans) {
                 if (trans.status !== 'success') {
                     const pkg = PACKAGES.find(p => p.id === trans.packageId);
@@ -256,13 +264,13 @@ app.get('/api/payment/vnpay_return', (req, res) => {
             } else {
                 console.log('Transaction not found in memory.');
             }
-            res.redirect(`${frontendUrl}?paymentStatus=success`);
+            res.redirect(buildFrontendUrl(playerId, { paymentStatus: 'success' }));
         } else {
-            res.redirect(`${frontendUrl}?paymentStatus=failed&code=${responseCode}`);
+            res.redirect(buildFrontendUrl(playerId, { paymentStatus: 'failed', code: responseCode }));
         }
     } else {
         console.log('VNPay Signature Mismatch!');
-        res.redirect(`${frontendUrl}?paymentStatus=error&message=InvalidSignature`);
+        res.redirect(buildFrontendUrl(playerId, { paymentStatus: 'error', message: 'InvalidSignature' }));
     }
 });
 
@@ -323,7 +331,7 @@ app.get('/api/payment/momo_return', (req, res) => {
     console.log(req.query);
     
     const trans = transactions.find(t => t.orderId === orderId);
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const playerId = trans?.playerId || req.query.playerId || 'demo-player';
 
     if (resultCode == '0') {
         if (trans && trans.status !== 'success') {
@@ -334,10 +342,10 @@ app.get('/api/payment/momo_return', (req, res) => {
                 console.log(`MoMo Return: Balance updated: +${pkg.amount}. Player: ${trans.playerId || 'demo-player'}`);
             }
         }
-        res.redirect(`${frontendUrl}?paymentStatus=success`);
+        res.redirect(buildFrontendUrl(playerId, { paymentStatus: 'success' }));
     } else {
         console.log(`MoMo Payment Failed: ${message}`);
-        res.redirect(`${frontendUrl}?paymentStatus=failed&code=${resultCode}`);
+        res.redirect(buildFrontendUrl(playerId, { paymentStatus: 'failed', code: resultCode }));
     }
 });
 app.post(['/api/payment/momo', '/api/payment/momo_atm'], async (req, res) => {
@@ -358,8 +366,7 @@ app.post(['/api/payment/momo', '/api/payment/momo_atm'], async (req, res) => {
     if (finalPrice === 0) {
         const balance = creditBalance(playerId, pkg.amount);
         transactions.push({ orderId: 'FREE_MOMO' + Date.now(), playerId, packageId, amount: pkg.amount, status: 'success', provider: isAtm ? 'momo_atm' : 'momo' });
-        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-        return res.json({ paymentUrl: `${frontendUrl}?paymentStatus=success`, balance, rc: balance, currency: 'RC' });
+        return res.json({ paymentUrl: buildFrontendUrl(playerId, { paymentStatus: 'success' }), balance, rc: balance, currency: 'RC' });
     }
 
     const partnerCode = process.env.MOMO_PARTNER_CODE;
