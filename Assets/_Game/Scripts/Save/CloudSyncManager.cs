@@ -24,6 +24,15 @@ public class CloudSyncManager : MonoBehaviour, ICloudSync
 
     private SyncQueue _queue;
 
+    public static CloudSyncManager GetOrCreate()
+    {
+        if (Instance != null)
+            return Instance;
+
+        GameObject host = new GameObject("RG Cloud Sync");
+        return host.AddComponent<CloudSyncManager>();
+    }
+
     // ── OCP Fix: Đăng ký Endpoint động ───────────────────────────
     private readonly Dictionary<string, string> _endpoints = new()
     {
@@ -54,7 +63,11 @@ public class CloudSyncManager : MonoBehaviour, ICloudSync
             SaveManager.Instance.OnScoreSaved += HandleScoreSaved;
         }
 
-        if (IsOnline) ProcessPendingQueue();
+        if (IsOnline)
+        {
+            ProcessPendingQueue();
+            DownloadPlayerData();
+        }
     }
 
     private void OnDestroy()
@@ -70,7 +83,9 @@ public class CloudSyncManager : MonoBehaviour, ICloudSync
     // ─────────────────────────────────────────────────────────────────────
 
     public int PendingCount => _queue.PendingCount;
-    public bool IsOnline => NetworkMonitor.Instance != null && NetworkMonitor.Instance.IsConnected;
+    // In the local test scene NetworkMonitor may not be installed. The
+    // request itself is the reliable connectivity check in that case.
+    public bool IsOnline => NetworkMonitor.Instance == null || NetworkMonitor.Instance.IsConnected;
 
     public void SyncScore(string songGroupId, Difficulty difficulty, int score, float accuracy, string rank)
     {
@@ -121,6 +136,35 @@ public class CloudSyncManager : MonoBehaviour, ICloudSync
             catch (Exception e)
             {
                 Debug.LogError($"[CloudSync] Parse error: {e.Message}");
+                onComplete?.Invoke(false);
+            }
+        }));
+    }
+
+    public void RefreshWallet(Action<bool> onComplete = null)
+    {
+        StartCoroutine(GetRequest("/user/wallet", response =>
+        {
+            if (string.IsNullOrEmpty(response))
+            {
+                Debug.LogWarning("[CloudSync] Wallet request returned no response.");
+                onComplete?.Invoke(false);
+                return;
+            }
+
+            try
+            {
+                WalletBalanceResponse wallet = JsonUtility.FromJson<WalletBalanceResponse>(response);
+                if (wallet == null)
+                    throw new Exception("Empty wallet response.");
+
+                PlayerWallet.SetFromServer(CurrencyType.Diamond, Mathf.Max(0, wallet.diamonds));
+                Debug.Log($"[CloudSync] Wallet refreshed: player={wallet.playerId}, RC={wallet.rc}, Diamond={wallet.diamonds}");
+                onComplete?.Invoke(true);
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"[CloudSync] Wallet parse error: {e.Message}. Response: {response}");
                 onComplete?.Invoke(false);
             }
         }));
@@ -186,7 +230,14 @@ public class CloudSyncManager : MonoBehaviour, ICloudSync
 
     private void MergeWithLocal(PlayerDataResponse serverData)
     {
-        if (serverData?.songs == null || SaveManager.Instance == null) return;
+        if (serverData == null) return;
+
+        if (serverData.wallet != null)
+        {
+            PlayerWallet.SetFromServer(CurrencyType.Diamond, serverData.wallet.diamond);
+        }
+
+        if (serverData.songs == null || SaveManager.Instance == null) return;
 
         bool changed = false;
 
@@ -241,13 +292,24 @@ public class CloudSyncManager : MonoBehaviour, ICloudSync
 
         yield return req.SendWebRequest();
 
-        if (req.result == UnityWebRequest.Result.Success) onDone?.Invoke(req.downloadHandler.text);
-        else onDone?.Invoke(null);
+        if (req.result == UnityWebRequest.Result.Success)
+        {
+            onDone?.Invoke(req.downloadHandler.text);
+        }
+        else
+        {
+            Debug.LogWarning($"[CloudSync] GET {url} failed: {req.result} ({req.responseCode}) {req.error}");
+            onDone?.Invoke(null);
+        }
     }
 
     private void AppendAuthHeader(UnityWebRequest req)
     {
         string playerId = SaveManager.Instance?.GetPlayerId();
+        if (string.IsNullOrEmpty(playerId) && AccountSession.IsSignedIn)
+            playerId = AccountSession.CurrentUsername;
+        if (string.IsNullOrEmpty(playerId))
+            playerId = "demo-player";
         if (!string.IsNullOrEmpty(playerId))
             req.SetRequestHeader("X-Player-Id", playerId);
     }

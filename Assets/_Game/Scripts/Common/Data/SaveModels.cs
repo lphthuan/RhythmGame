@@ -59,5 +59,21 @@ public class PlayerDataResponse
     public string          playerId;
     public PlayerSaveSettings  settings;
     public SongSaveData[]  songs;
+    public WalletData       wallet;
     public long            lastSyncedAt;
+}
+
+[Serializable]
+public class WalletData
+{
+    public int diamond;
+}
+
+[Serializable]
+public class WalletBalanceResponse
+{
+    public string playerId;
+    public int rc;
+    public int diamonds;
+    public int conversionRate;
 }
