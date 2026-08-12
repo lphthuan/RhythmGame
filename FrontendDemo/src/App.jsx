@@ -57,7 +57,12 @@ function App() {
       } else if (status === 'error') {
         showToast('Lỗi xử lý: ' + urlParams.get('message'), 'error');
       }
-      window.history.replaceState({}, document.title, window.location.pathname);
+      const cleanUrl = new URL(window.location.href);
+      cleanUrl.searchParams.delete('paymentStatus');
+      cleanUrl.searchParams.delete('code');
+      cleanUrl.searchParams.delete('message');
+      cleanUrl.searchParams.set('playerId', PLAYER_ID);
+      window.history.replaceState({}, document.title, `${cleanUrl.pathname}?${cleanUrl.searchParams.toString()}`);
       fetchBalance();
       fetchData();
     }
